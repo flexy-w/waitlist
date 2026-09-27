@@ -59,7 +59,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
   <div ref="{{ hero }}" style="position:absolute;top:0;right:0;bottom:0;width:min(100%,max(60%,720px));pointer-events:none">
     <canvas ref="{{ heroCanvas }}" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
   </div>
-  <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><button data-arrow="1" onClick="{{ toEvents }}" style="position:absolute;left:{{ arrowLeft }};bottom:{{ arrowBottom }};transform:{{ arrowTf }};z-index:2;display:flex;gap:8px;align-items:center;background:transparent;color:#7FE9F0;border:0;font-family:inherit;font-size:12px;letter-spacing:.08em;padding:8px 12px;min-height:44px;white-space:nowrap" style-hover="background:#7FE9F0;color:var(--bsod,#040805);box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1)))"><span style="font-size:14px">▼</span>INFO</button></sc-if>
+  <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}"><button data-arrow="1" onClick="{{ toEvents }}" style="position:absolute;left:{{ arrowLeft }};bottom:{{ arrowBottom }};transform:{{ arrowTf }};z-index:2;display:flex;gap:8px;align-items:center;background:transparent;color:#7FE9F0;border:0;font-family:inherit;font-size:12px;letter-spacing:.08em;padding:8px 12px;min-height:44px;white-space:nowrap" style-hover="background:#7FE9F0;color:var(--bsod,#040805);box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1)))"><span style="font-size:14px">▼</span>EVENT INFO</button></sc-if>
 
   <header style="position:relative;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px 12px;font-size:clamp(10px,2.6vw,12px);letter-spacing:.08em;text-transform:uppercase">
     <div style="display:flex;flex-direction:column;gap:8px">
@@ -146,7 +146,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
 
 <section data-screen-label="Events" data-lens="1" style="filter:{{ lensFilterX }};padding:{{ evPadTop }} clamp(16px,3vw,40px) clamp(48px,8vw,120px);display:flex;flex-direction:column;gap:clamp(28px,4vw,48px)">
   <div style="display:flex;justify-content:center">
-    <h2 style="margin: 0; background: #7FE9F0; color: var(--bsod,#040805); padding: .12em .35em; font-weight: 400; font-size: clamp(28px,7vw,47px); line-height: 1; letter-spacing: 0; text-align: center;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))">INFO</h2>
+    <h2 style="margin: 0; background: #7FE9F0; color: var(--bsod,#040805); padding: .12em .35em; font-weight: 400; font-size: clamp(28px,7vw,47px); line-height: 1; letter-spacing: 0; text-align: center;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))">EVENT INFO</h2>
   </div>
 
     <div style="width:100%;max-width:880px;margin:0 auto;border:2px solid #7FE9F0;display:flex;flex-direction:column;box-shadow:0 0 10px rgba(127,233,240,calc(.35 * var(--g,1))),inset 0 0 10px rgba(127,233,240,calc(.12 * var(--g,1)))">
