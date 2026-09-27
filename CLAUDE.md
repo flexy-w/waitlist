@@ -38,7 +38,7 @@ There are two parts:
 | `lensWarp` | true | Subtle wide-angle edge warp (desktop ≥1100px only) |
 | `scanlines` | true | Scanline overlay |
 | `preloader` / `introEveryLoad` | true / false | Loading screen; once per session unless introEveryLoad |
-| `customCursor` | false | Block cursor |
+| `customCursor` | true | Blinking block mouse cursor with X/Y readout (desktop mice only) |
 | `radioStreamUrl` | "" | Real stream URL for the radio toggle. Empty means the built-in 174 BPM synth. |
 | `queueBase` | 200 | Starting waitlist queue number |
 | `waitlistFull` | false | FOMO mode: sign-ups get a "WAITLIST FULL" pop-up and go on the overflow list (sent with `list: "overflow"`); status shows WAITLIST FULL |
@@ -46,7 +46,7 @@ There are two parts:
 
 ## Page sections (template, in order)
 - **Boot / preloader** (top of the template): the bouncing ASCII hand and 000→174 counter. Messages: "Calibrating low-end", "Loading doubles", "Reloading gunfingers", "Preparing frog lasers", "Sub bass detected", then "Loading complete".
-- **Hero** (`data-screen-label="Hero"`, ~line 55): the header row, the H1 `SURROUND` (scrambles on hover), the highlighted subhead "The filthiest local Drum & Bass party Sydney has ever seen. One night only.", the terminal signup, and the ASCII hand canvas.
+- **Hero** (`data-screen-label="Hero"`, ~line 55): the header row, the H1 `SURROUND` (scrambles on hover), the highlighted subhead "The filthiest Drum & Bass party Sydney has ever seen. One night only.", the terminal signup, and the ASCII hand canvas.
 - **Events / INFO** (`data-screen-label="Events"`, ~line 142): the centred highlighted `EVENT INFO` header, then the `EVENT_001.EXE` window with the #001 details, "STATUS: WAITLIST ONLINE" with a green blinker, DATE/LOCATION/LINEUP set to [REDACTED], the `> RESERVE YOUR SPOT` button, the globe, and the foldable data panels (graph and data console).
 - **About** (`data-screen-label="About"`, ~line 221): two `>` lines with a blinking block cursor.
 - **Footer** (`data-screen-label="Footer"`, ~line 230): a `CONTACT` tag and the links `> INSTAGRAM`, `> TIKTOK`, `> SOUNDCLOUD`, `> EMAIL`, plus the © line.
