@@ -41,6 +41,7 @@ There are two parts:
 | `customCursor` | false | Block cursor |
 | `radioStreamUrl` | "" | Real stream URL for the radio toggle. Empty means the built-in 174 BPM synth. |
 | `queueBase` | 200 | Starting waitlist queue number |
+| `waitlistFull` | false | FOMO mode: sign-ups get a "WAITLIST FULL" pop-up and go on the overflow list (sent with `list: "overflow"`); status shows WAITLIST FULL |
 | `screenBlue` | #040805 | Background colour |
 
 ## Page sections (template, in order)

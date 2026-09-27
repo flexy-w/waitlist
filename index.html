@@ -21,6 +21,7 @@ input::placeholder{color:rgba(127,233,240,.6)}
 input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{-webkit-text-fill-color:transparent;caret-color:transparent;-webkit-box-shadow:0 0 0 1000px transparent inset;box-shadow:0 0 0 1000px transparent inset;transition:background-color 99999s ease 0s,color 99999s ease 0s;font-family:inherit}
 input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webkit-box-shadow:0 0 0 1000px transparent inset;box-shadow:0 0 0 1000px transparent inset;transition:background-color 99999s ease 0s,color 99999s ease 0s;font-family:inherit}
 @keyframes blink{50%{opacity:0}}
+@keyframes crtIn{0%{transform:scale(1,.01);filter:brightness(3)}55%{transform:scale(1,1);filter:brightness(1.8)}100%{transform:none;filter:none}}
 </style>
 </helmet>
 <div ref="{{ root }}" style="background:var(--bsod,#040805);color:#7FE9F0;text-shadow:0 0 5px rgba(127,233,240,calc(.6 * var(--g,1))),0 0 16px rgba(127,233,240,calc(.25 * var(--g,1)));min-height:100vh;position:relative">
@@ -133,6 +134,8 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
               <span style="font-size:13px">EACH FRIEND WHO JOINS MOVES YOU UP 50 PLACES.</span>
             </div>
           </div>
+        </sc-if>
+        <sc-if value="{{ showReset }}" hint-placeholder-val="{{ false }}">
           <button onClick="{{ reset }}" style="align-self:flex-start;background:none;border:0;padding:4px 0;color:#7FE9F0;font-family:inherit;font-size:12px;text-decoration:underline;text-transform:uppercase;letter-spacing:.04em">Not you? Re-enter email</button>
         </sc-if>
       </div>
@@ -172,7 +175,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px">
-            <span style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: clamp(16px,4.4vw,19px); max-width: 100%">STATUS: WAITLIST ONLINE<span style="width:.5em;height:.5em;background:#3DFF6E;box-shadow:0 0 8px #3DFF6E;animation:blink 1.2s steps(1) infinite"></span></span>
+            <span style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: clamp(16px,4.4vw,19px); max-width: 100%">STATUS: {{ statusText }}<span style="width:.5em;height:.5em;background:{{ blinkCol }};box-shadow:0 0 8px {{ blinkCol }};animation:blink 1.2s steps(1) infinite"></span></span>
         <button data-menu="1" onClick="{{ focusForm }}" style="align-self:{{ resAlign }};text-align:center;background:#7FE9F0;color:var(--bsod,#040805);border:0;font-family:inherit;font-size:clamp(16px,1.6vw,20px);padding:12px 18px;min-height:44px;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))" style-hover="background:#F2FFFF;box-shadow:0 0 18px rgba(127,233,240,calc(.9 * var(--g,1))),0 0 4px rgba(242,255,255,.9)">&gt; RESERVE YOUR SPOT</button>
         </div>
       </div>
@@ -247,6 +250,26 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
   </div>
 </footer>
 
+<sc-if value="{{ fullOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeFull }}" style="position:fixed;inset:0;z-index:89;background:rgba(4,8,5,.82);display:flex;align-items:center;justify-content:center;padding:16px">
+    <div role="dialog" aria-modal="true" aria-labelledby="hs-full-title" onClick="{{ stopClick }}" style="width:100%;max-width:520px;background:var(--bsod,#040805);border:2px solid #7FE9F0;display:flex;flex-direction:column;animation:crtIn .45s cubic-bezier(.2,.7,.2,1);box-shadow:0 0 18px rgba(127,233,240,calc(.45 * var(--g,1))),inset 0 0 10px rgba(127,233,240,calc(.12 * var(--g,1)))">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#7FE9F0;color:var(--bsod,#040805);padding:6px 12px;font-size:13px;letter-spacing:.06em;text-shadow:none;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))">
+        <span>WAITLIST_FULL.EXE</span>
+        <button onClick="{{ closeFull }}" aria-label="Close" style="background:none;border:0;padding:0;color:inherit;font-family:inherit;font-size:inherit;letter-spacing:inherit;cursor:pointer">[X]</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:clamp(20px,5vw,32px);text-transform:uppercase">
+        <h2 id="hs-full-title" style="margin:0;font-weight:400;font-size:clamp(30px,8vw,44px);line-height:1;letter-spacing:0">WAITLIST FULL</h2>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:clamp(14px,3.8vw,16px);line-height:1.6">
+          <div>&gt; ERROR 0x1F4: ALL SLOTS ALLOCATED.</div>
+          <div>&gt; YOU'RE ON THE OVERFLOW LIST.</div>
+          <div style="overflow-wrap:anywhere">&gt; WE'LL EMAIL <span style="background:#7FE9F0;color:var(--bsod,#040805);padding:0 .3em;text-shadow:none">{{ fullEmail }}</span> AS SOON AS MORE SLOTS OPEN.</div>
+        </div>
+        <button ref="{{ fullOk }}" onClick="{{ closeFull }}" style="align-self:flex-start;margin-top:6px;background:#7FE9F0;color:var(--bsod,#040805);border:0;font-family:inherit;font-size:16px;letter-spacing:.06em;padding:0 16px;min-height:44px;text-shadow:none;cursor:pointer;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))" style-hover="background:#F2FFFF;box-shadow:0 0 18px rgba(127,233,240,calc(.9 * var(--g,1))),0 0 4px rgba(242,255,255,.9)">&gt; OK</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
 <sc-if value="{{ scanlines }}" hint-placeholder-val="{{ true }}">
   <div style="position:fixed;inset:0;pointer-events:none;z-index:90;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.28) 0px,rgba(0,0,0,.28) 1px,transparent 1px,transparent 3px)"></div>
   <div style="position:fixed;inset:0;pointer-events:none;z-index:91;background:radial-gradient(ellipse 75% 65% at 50% 45%,rgba(127,233,240,.07) 0%,rgba(127,233,240,.035) 35%,transparent 65%),radial-gradient(ellipse 120% 110% at 50% 50%,transparent 60%,rgba(0,0,0,.6) 100%);box-shadow:inset 0 0 90px 10px rgba(0,0,0,.65),inset 0 0 220px rgba(127,233,240,calc(.05 * var(--g,1)));border-radius:18px"></div>
@@ -276,7 +299,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;screenBlue&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#040805&quot;,&quot;options&quot;:[&quot;#040805&quot;,&quot;#000000&quot;,&quot;#07110A&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;preloader&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;introEveryLoad&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;customCursor&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;handSize&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.95,&quot;min&quot;:0.3,&quot;max&quot;:2.5,&quot;step&quot;:0.05,&quot;unit&quot;:&quot;×&quot;,&quot;section&quot;:&quot;Hand&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;handX&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:-2,&quot;min&quot;:-60,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Hand&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;handY&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:-7,&quot;min&quot;:-40,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Hand&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;heroTextX&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:-200,&quot;max&quot;:400,&quot;step&quot;:2,&quot;unit&quot;:&quot;px&quot;,&quot;section&quot;:&quot;Hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;heroTextY&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:-500,&quot;max&quot;:100,&quot;step&quot;:2,&quot;unit&quot;:&quot;px&quot;,&quot;section&quot;:&quot;Hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;mobileTextX&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:-100,&quot;max&quot;:100,&quot;step&quot;:2,&quot;unit&quot;:&quot;px&quot;,&quot;section&quot;:&quot;Mobile hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;mobileTextY&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:-50,&quot;max&quot;:400,&quot;step&quot;:2,&quot;unit&quot;:&quot;px&quot;,&quot;section&quot;:&quot;Mobile hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;mobileHandLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;above&quot;,&quot;below&quot;,&quot;background&quot;],&quot;default&quot;:&quot;above&quot;,&quot;section&quot;:&quot;Mobile hero text&quot;,&quot;tsType&quot;:&quot;'above' | 'below' | 'background'&quot;},&quot;mobileHandSize&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.4,&quot;max&quot;:1.6,&quot;step&quot;:0.05,&quot;unit&quot;:&quot;×&quot;,&quot;section&quot;:&quot;Mobile hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;radioStreamUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;section&quot;:&quot;Radio&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;lensWarp&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;queueBase&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:200,&quot;min&quot;:0,&quot;max&quot;:100000,&quot;step&quot;:1,&quot;section&quot;:&quot;Waitlist&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.7,&quot;min&quot;:0,&quot;max&quot;:1.5,&quot;step&quot;:0.05,&quot;unit&quot;:&quot;×&quot;,&quot;section&quot;:&quot;CRT&quot;,&quot;tsType&quot;:&quot;number&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;screenBlue&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#040805&quot;,&quot;options&quot;:[&quot;#040805&quot;,&quot;#000000&quot;,&quot;#07110A&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;preloader&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;introEveryLoad&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;customCursor&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;handSize&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.95,&quot;min&quot;:0.3,&quot;max&quot;:2.5,&quot;step&quot;:0.05,&quot;unit&quot;:&quot;×&quot;,&quot;section&quot;:&quot;Hand&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;handX&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:-2,&quot;min&quot;:-60,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Hand&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;handY&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:-7,&quot;min&quot;:-40,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;%&quot;,&quot;section&quot;:&quot;Hand&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;heroTextX&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:-200,&quot;max&quot;:400,&quot;step&quot;:2,&quot;unit&quot;:&quot;px&quot;,&quot;section&quot;:&quot;Hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;heroTextY&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:-500,&quot;max&quot;:100,&quot;step&quot;:2,&quot;unit&quot;:&quot;px&quot;,&quot;section&quot;:&quot;Hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;mobileTextX&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:-100,&quot;max&quot;:100,&quot;step&quot;:2,&quot;unit&quot;:&quot;px&quot;,&quot;section&quot;:&quot;Mobile hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;mobileTextY&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0,&quot;min&quot;:-50,&quot;max&quot;:400,&quot;step&quot;:2,&quot;unit&quot;:&quot;px&quot;,&quot;section&quot;:&quot;Mobile hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;mobileHandLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;above&quot;,&quot;below&quot;,&quot;background&quot;],&quot;default&quot;:&quot;above&quot;,&quot;section&quot;:&quot;Mobile hero text&quot;,&quot;tsType&quot;:&quot;'above' | 'below' | 'background'&quot;},&quot;mobileHandSize&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.4,&quot;max&quot;:1.6,&quot;step&quot;:0.05,&quot;unit&quot;:&quot;×&quot;,&quot;section&quot;:&quot;Mobile hero text&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;radioStreamUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;section&quot;:&quot;Radio&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;lensWarp&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;waitlistFull&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;section&quot;:&quot;Waitlist&quot;,&quot;tsType&quot;:&quot;boolean&quot;},&quot;queueBase&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:200,&quot;min&quot;:0,&quot;max&quot;:100000,&quot;step&quot;:1,&quot;section&quot;:&quot;Waitlist&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;glow&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.7,&quot;min&quot;:0,&quot;max&quot;:1.5,&quot;step&quot;:0.05,&quot;unit&quot;:&quot;×&quot;,&quot;section&quot;:&quot;CRT&quot;,&quot;tsType&quot;:&quot;number&quot;}}">
 const RAMP = " .:-=+*#%@";
 const GLITCH = "!<>-_/[]{}=+*^?#01%&$@";
 const PALETTE = ["#7FE9F0", "#C9FFF9", "#F2FFFF"];
@@ -490,14 +513,14 @@ class Component extends DCLogic {
     try { saved = JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) {}
     return {
       booting: (this.props.preloader ?? true) && ((this.props.introEveryLoad ?? false) || /intro/.test(location.hash + location.search) || (() => { try { return !sessionStorage.getItem("hs_booted"); } catch (e) { return true; } })()),
-      email: saved ? saved.email : "", joined: !!saved, pos: saved ? saved.pos : 0,
+      email: saved ? saved.email : "", joined: !!saved, overflow: !!(saved && saved.overflow), fullOpen: false, pos: saved ? saved.pos : 0,
       logShown: saved ? 4 : 0, error: "", copied: false, eventsTab: "up", mobile: typeof window !== "undefined" && window.innerWidth < 640, hud: typeof window !== "undefined" && window.innerWidth >= 900
     };
   })();
 
   constructor(p) {
     super(p);
-    ["root", "hero", "heroCanvas", "boot", "bootCanvas", "bootPct", "bootBar", "bootMsg", "bootCorners", "clock", "queue", "cdD", "cdH", "cdM", "cdS", "cursor", "cursorBox", "cursorLbl", "emailRef", "hudHex", "hudUp", "hudSig", "hudNode", "hudDb", "hudLat", "hudPkt", "hudEq", "hudCoord", "cdLine", "artWrap", "artCanvas", "artLabel", "globeWrap", "globeCanvas", "globeStatus", "globeZoom", "heroText", "hudWrap", "handSlot", "radioEq", "waveCanvas", "lensImg", "lensDisp", "lensImgX", "lensDispX", "pongCanvas", "pongWrap", "pongP", "pongC", "graphCanvas", "cX", "cY", "cZ", "gaugeL", "gaugeR"].forEach(k => (this[k] = React.createRef()));
+    ["root", "fullOk", "hero", "heroCanvas", "boot", "bootCanvas", "bootPct", "bootBar", "bootMsg", "bootCorners", "clock", "queue", "cdD", "cdH", "cdM", "cdS", "cursor", "cursorBox", "cursorLbl", "emailRef", "hudHex", "hudUp", "hudSig", "hudNode", "hudDb", "hudLat", "hudPkt", "hudEq", "hudCoord", "cdLine", "artWrap", "artCanvas", "artLabel", "globeWrap", "globeCanvas", "globeStatus", "globeZoom", "heroText", "hudWrap", "handSlot", "radioEq", "waveCanvas", "lensImg", "lensDisp", "lensImgX", "lensDispX", "pongCanvas", "pongWrap", "pongP", "pongC", "graphCanvas", "cX", "cY", "cZ", "gaugeL", "gaugeR"].forEach(k => (this[k] = React.createRef()));
     this.queueN = (p && p.queueBase != null ? p.queueBase : 200);
     this.mouse = { x: -9999, y: -9999 };
   }
@@ -1100,7 +1123,7 @@ class Component extends DCLogic {
     if (hx || hy) { let c; do c = rnd(PALETTE); while (c === this.bcol); this.bcol = c; }
     if (hx && hy) { this.corners++; if (this.bootCorners.current) this.bootCorners.current.textContent = String(this.corners).padStart(2, "0"); }
     const ctx = this.bctx;
-    ctx.save(); ctx.globalCompositeOperation = "destination-out"; ctx.fillStyle = "rgba(0,0,0," + (this.reduce ? 1 : 0.28) + ")"; ctx.fillRect(0, 0, W, H); ctx.restore();
+    ctx.clearRect(0, 0, W, H);
     ctx.save(); ctx.shadowColor = this.bcol; ctx.shadowBlur = Math.max(3, cw * 1.4);
     renderGrid(ctx, g, this.bx, this.by, cw, ch, cw / 0.6, now / 1000, this.bcol, this.blue(), false);
     ctx.restore();
@@ -1229,6 +1252,7 @@ class Component extends DCLogic {
 
   handleKey(e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (this.state.fullOpen) { if (e.key === "Escape") this.closeFull(); return; }
     if (this.state.pong) { if (e.key === "Escape") this.closePong(); if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault(); return; }
     if (this.state.booting) { this.skipBoot(); return; }
     if (e.key === "Escape") { this.reboot(); return; }
@@ -1288,6 +1312,7 @@ class Component extends DCLogic {
       this.setState({ error: "ERROR 0x21: INVALID ADDRESS. TRY AGAIN." });
       return;
     }
+    if (this.props.waitlistFull) { this.joinOverflow(email); return; }
     try { localStorage.setItem(STORE + "_partial", JSON.stringify({ email })); } catch (err) {}
     this.setState({ step: "name", error: "", history: ["> RESERVE YOUR SPOT: " + email.toUpperCase(), "> EMAIL LOCKED ✓"] }, () => this.refocus());
   };
@@ -1296,13 +1321,31 @@ class Component extends DCLogic {
     const email = (this.state.email || "").trim(), name = (this.state.name || "").trim();
     const pos = this.queueN + 1; this.queueN = pos; this.setState({ qn: pos });
     try { localStorage.setItem(STORE, JSON.stringify({ email, name, handle, pos })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
-    try { fetch(WAITLIST_URL, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ email, name, handle }) }).catch(() => {}); } catch (err) {}
-    this.setState({ joined: true, pos, error: "", logShown: 0, handle, step: "email", history: [] });
+    this.sendSignup({ email, name, handle });
+    this.setState({ joined: true, overflow: false, pos, error: "", logShown: 0, handle, step: "email", history: [] });
     clearInterval(this.logTimer);
     this.logTimer = setInterval(() => {
       this.setState(s => ({ logShown: s.logShown + 1 }), () => { if (this.state.logShown >= 2) clearInterval(this.logTimer); });
     }, 420);
   }
+
+  sendSignup(data) {
+    try { fetch(WAITLIST_URL, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(data) }).catch(() => {}); } catch (err) {}
+  }
+
+  joinOverflow(email) {
+    try { localStorage.setItem(STORE, JSON.stringify({ email, overflow: true })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
+    this.sendSignup({ email, name: "", handle: "", list: "overflow" });
+    clearInterval(this.logTimer);
+    this.lastFocus = document.activeElement;
+    this.setState({ joined: true, overflow: true, fullOpen: true, pos: 0, error: "", logShown: 2, step: "email", history: [] }, () => setTimeout(() => { const b = this.fullOk.current; if (b) b.focus({ preventScroll: true }); }, 30));
+  }
+
+  closeFull = () => {
+    this.setState({ fullOpen: false });
+    const el = this.lastFocus; this.lastFocus = null;
+    if (el && el.focus && document.contains(el)) el.focus({ preventScroll: true });
+  };
 
   copyInvite = () => {
     const url = "https://SURROUND.xyz/?r=" + (((this.state.name || "x").replace(/[^a-z0-9]/gi, "").slice(0, 5)) + (this.state.pos || 0).toString(36)).toLowerCase();
@@ -1312,12 +1355,16 @@ class Component extends DCLogic {
 
   reset = () => {
     try { localStorage.removeItem(STORE); } catch (e) {}
-    this.setState({ joined: false, started: true, email: "", name: "", handle: "", step: "email", history: [], logShown: 0, pos: 0 }, () => setTimeout(this.focusForm, 50));
+    this.setState({ joined: false, overflow: false, started: true, email: "", name: "", handle: "", step: "email", history: [], logShown: 0, pos: 0 }, () => setTimeout(this.focusForm, 50));
   };
 
   renderVals() {
     const { email, joined, pos, logShown, error, copied, booting } = this.state;
-    const lines = [
+    const full = !!this.props.waitlistFull, overflow = !!this.state.overflow;
+    const lines = overflow ? [
+      "> WAITLIST FULL. YOU'RE ON THE OVERFLOW LIST.",
+      "> WE'LL EMAIL YOU AS SOON AS MORE SLOTS OPEN."
+    ] : [
       "> YOU'RE IN, " + (this.state.name || "RAVER").toUpperCase() + ".",
       "> QUEUE POSITION: #" + (pos || 0).toLocaleString("en-US")
     ];
@@ -1327,7 +1374,7 @@ class Component extends DCLogic {
       clock: this.clock, queue: this.queue, cdD: this.cdD, cdH: this.cdH, cdM: this.cdM, cdS: this.cdS,
       cursor: this.cursor, cursorBox: this.cursorBox, cursorLbl: this.cursorLbl, emailRef: this.emailRef, customCursor: this.props.customCursor ?? true, hudHex: this.hudHex, hudUp: this.hudUp, hudSig: this.hudSig, hudNode: this.hudNode, hudDb: this.hudDb, hudLat: this.hudLat, hudPkt: this.hudPkt, hudEq: this.hudEq, hudCoord: this.hudCoord, cdLine: this.cdLine, globeWrap: this.globeWrap, globeCanvas: this.globeCanvas, globeStatus: this.globeStatus, globeZoom: this.globeZoom, heroText: this.heroText, handSlot: this.handSlot, waveCanvas: this.waveCanvas, artWrap: this.artWrap, artCanvas: this.artCanvas, artLabel: this.artLabel, isMobileView: !!this.state.mobile, globeOrder: this.state.mobile ? "-1" : "0", evGap: this.state.mobile ? "16px" : "clamp(24px,3vw,40px)", rowPad: this.state.mobile ? "6px 0" : "14px 0", numSize: this.state.mobile ? "44px" : "63px", resAlign: this.state.mobile ? "stretch" : "flex-start",
       dataToggle: !!this.state.mobile, showData: !this.state.mobile || !!this.state.dataOpen, dataOpen: !!this.state.dataOpen, dataSign: this.state.dataOpen ? "[−]" : "[+]", toggleData: () => this.setState(s => ({ dataOpen: !s.dataOpen })), heroMinH: this.state.mobile ? "calc(100svh - 110px)" : "100svh", evPadTop: this.state.mobile ? "20px" : "clamp(48px,8vw,120px)", started: true, notStarted: false, startSignup: this.startSignup, queueCount: (this.state.qn ?? this.queueN).toLocaleString("en-US"), heroPadB: (this.state.hud !== false) ? "110px" : "clamp(28px,5vw,56px)", pong: !!this.state.pong, openPong: this.openPong, closePong: this.closePong, pongCanvas: this.pongCanvas, pongWrap: this.pongWrap, pongP: this.pongP, pongC: this.pongC, graphCanvas: this.graphCanvas, cX: this.cX, cY: this.cY, cZ: this.cZ, gaugeL: this.gaugeL, gaugeR: this.gaugeR,
-      hudFrame: !this.state.mobile, stats: [["CAPACITY", 400 ? 88 : 0, "#7FE9F0"], ["SUB-BASS", 97, "#7FE9F0"], ["DOUBLES LOADED", 92, "#7FE9F0"], ["GUNFINGERS READY", 100, "#FFB347"], ["FROG LASERS", 64, "#7FE9F0"]].map(([label, pct, col]) => ({ label, pct, w: pct + "%", col })), lensImg: this.lensImg, lensDisp: this.lensDisp, lensImgX: this.lensImgX, lensDispX: this.lensDispX, lensFilter: this.lensOn() ? "url(#hs-lens)" : "none", lensFilterX: this.lensOn() ? "url(#hs-lens-x)" : "none", waveBottom: (this.state.hud !== false) ? "100px" : "64px", onEmailFocus: e => { if (!this.state.mobile) return; const el = e.currentTarget; setTimeout(() => { const vv = window.visualViewport, vh = vv ? vv.height : window.innerHeight, r = el.getBoundingClientRect(); if (r.bottom > vh * 0.6 || r.top < 60) window.scrollTo({ top: window.scrollY + r.top - vh * 0.35, behavior: "smooth" }); }, 350); }, radioEq: this.radioEq, toggleRadio: this.toggleRadio,
+      hudFrame: !this.state.mobile, stats: [["CAPACITY", full ? 100 : 88, full ? "#FFB347" : "#7FE9F0"], ["SUB-BASS", 97, "#7FE9F0"], ["DOUBLES LOADED", 92, "#7FE9F0"], ["GUNFINGERS READY", 100, "#FFB347"], ["FROG LASERS", 64, "#7FE9F0"]].map(([label, pct, col]) => ({ label, pct, w: pct + "%", col })), lensImg: this.lensImg, lensDisp: this.lensDisp, lensImgX: this.lensImgX, lensDispX: this.lensDispX, lensFilter: this.lensOn() ? "url(#hs-lens)" : "none", lensFilterX: this.lensOn() ? "url(#hs-lens-x)" : "none", waveBottom: (this.state.hud !== false) ? "100px" : "64px", onEmailFocus: e => { if (!this.state.mobile) return; const el = e.currentTarget; setTimeout(() => { const vv = window.visualViewport, vh = vv ? vv.height : window.innerHeight, r = el.getBoundingClientRect(); if (r.bottom > vh * 0.6 || r.top < 60) window.scrollTo({ top: window.scrollY + r.top - vh * 0.35, behavior: "smooth" }); }, 350); }, radioEq: this.radioEq, toggleRadio: this.toggleRadio,
       arrowBottom: (this.state.hud !== false) ? "48px" : "calc(12px + env(safe-area-inset-bottom, 0px))", globeMax: this.state.mobile ? "210px" : "356px", arrowLeft: this.state.mobile ? "8px" : "50%", arrowTf: this.state.mobile ? "none" : "translateX(-50%)", radioOn: !!this.state.radioOn, radioOff: !this.state.radioOn, radioMobile: !(this.state.hud !== false) && !this.state.booting, radioLabel: this.state.radioOn ? "ON" : "OFF",
       radioBg: this.state.radioOn ? "#7FE9F0" : "transparent", radioFg: this.state.radioOn ? "var(--bsod,#040805)" : "#7FE9F0",
       radioDot: this.state.radioOn ? "#3DFF6E" : "rgba(127,233,240,.4)", radioGlow: this.state.radioOn ? "0 0 6px #3DFF6E" : "none", toEvents: () => { const el = this.root.current && this.root.current.querySelector('section[data-screen-label="Events"]'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: "smooth" }); }, hudWrap: this.hudWrap,  heroGap: this.state.mobile ? "28px" : "48px", heroTextMargin: this.state.mobile ? (this.mOffsets().layout === "below" ? "0" : this.mOffsets().layout === "above" ? "0 0 auto" : "auto 0") : "auto 0", footerCta: this.state.mobile ? "↑ Tap to reserve your spot" : "Press any key to continue", hud: this.state.hud !== false && !booting,
@@ -1335,7 +1382,7 @@ class Component extends DCLogic {
       showUpTab: () => this.setState({ eventsTab: "up" }), showPastTab: () => this.setState({ eventsTab: "past" }),
       upBg: this.state.eventsTab === "up" ? "#7FE9F0" : "transparent", upFg: this.state.eventsTab === "up" ? "var(--bsod,#040805)" : "#7FE9F0",
       pastBg: this.state.eventsTab === "past" ? "#7FE9F0" : "transparent", pastFg: this.state.eventsTab === "past" ? "var(--bsod,#040805)" : "#7FE9F0",
-      booting, joined, notJoined: !joined, email, emailEmpty: !email, emailFilled: !!email, emailReady: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim()), emailNotReady: !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim()), heroShift: this.state.mobile ? "translate(" + this.mOffsets().x + "px," + this.mOffsets().y + "px)" : "translate(" + (this.props.heroTextX ?? 0) + "px," + (this.props.heroTextY ?? 0) + "px)", notMobile: !this.state.mobile,
+      booting, joined, notJoined: !joined, fullOpen: !!this.state.fullOpen, closeFull: this.closeFull, stopClick: e => e.stopPropagation(), fullOk: this.fullOk, fullEmail: (email || "").trim().toUpperCase(), statusText: full ? "WAITLIST FULL" : "WAITLIST ONLINE", blinkCol: full ? "#FFB347" : "#3DFF6E", showReset: logShown >= 2, email, emailEmpty: !email, emailFilled: !!email, emailReady: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim()), emailNotReady: !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim()), heroShift: this.state.mobile ? "translate(" + this.mOffsets().x + "px," + this.mOffsets().y + "px)" : "translate(" + (this.props.heroTextX ?? 0) + "px," + (this.props.heroTextY ?? 0) + "px)", notMobile: !this.state.mobile,
       onEmail: e => this.setState({ email: e.target.value, error: "" }),
       ...(() => {
         const st = this.state.step || "email", key = st === "email" ? "email" : st === "name" ? "name" : "handle";
@@ -1353,7 +1400,7 @@ class Component extends DCLogic {
         };
       })(),
       submit: this.submit, error, hasError: !!error,
-      logLines: lines.slice(0, logShown), showShare: logShown >= 2,
+      logLines: lines.slice(0, logShown), showShare: logShown >= 2 && !overflow,
       copyInvite: this.copyInvite, copyLabel: copied ? "LINK COPIED" : "COPY INVITE LINK",
       ...(() => {
         const p = pos || 0, tier = p <= 400 ? 2 : p <= 1500 ? 1 : 0, need = Math.ceil(Math.max(0, p - 400) / 50), needS = Math.ceil(Math.max(0, p - 1500) / 50);
