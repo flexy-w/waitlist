@@ -115,6 +115,7 @@ input::placeholder{color:rgba(127,233,240,.6)}
         <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}">
           <div style="font-size:14px;letter-spacing:.04em;background:#7FE9F0;color:var(--bsod,#040805);padding:6px 10px;align-self:flex-start;font-weight:400;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))">{{ error }}</div>
         </sc-if>
+        <div style="font-size:11px;letter-spacing:.08em;opacity:.7;text-transform:uppercase">WE'LL EMAIL YOU WHEN TICKETS, DATE AND VENUE DROP. NO SPAM.</div>
       </div>
     </sc-if>
 
@@ -278,6 +279,7 @@ const RAMP = " .:-=+*#%@";
 const GLITCH = "!<>-_/[]{}=+*^?#01%&$@";
 const PALETTE = ["#7FE9F0", "#C9FFF9", "#F2FFFF"];
 const STORE = "headspace_waitlist";
+const WAITLIST_URL = "https://script.google.com/macros/s/AKfycbxcCwasuYrTX4i42LMVcvNFsjOYkv7x0x2SY8ODBw07EBY4w2QwmyhASXyhK113rHpvuQ/exec";
 const TARGET = new Date(2026, 10, 19, 22, 0, 0);
 const rnd = s => s[(Math.random() * s.length) | 0];
 
@@ -1292,6 +1294,7 @@ class Component extends DCLogic {
     const email = (this.state.email || "").trim(), name = (this.state.name || "").trim();
     const pos = this.queueN + 1; this.queueN = pos; this.setState({ qn: pos });
     try { localStorage.setItem(STORE, JSON.stringify({ email, name, handle, pos })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
+    try { fetch(WAITLIST_URL, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ email, name, handle }) }).catch(() => {}); } catch (err) {}
     this.setState({ joined: true, pos, error: "", logShown: 0, handle, step: "email", history: [] });
     clearInterval(this.logTimer);
     this.logTimer = setInterval(() => {
