@@ -18,6 +18,8 @@ a{color:#7FE9F0;text-decoration:underline}
 a:hover{color:#C9FFF9}
 ::selection{background:#7FE9F0;color:#040805}
 input::placeholder{color:rgba(127,233,240,.6)}
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{-webkit-text-fill-color:transparent;caret-color:transparent;-webkit-box-shadow:0 0 0 1000px transparent inset;box-shadow:0 0 0 1000px transparent inset;transition:background-color 99999s ease 0s,color 99999s ease 0s;font-family:inherit}
+input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webkit-box-shadow:0 0 0 1000px transparent inset;box-shadow:0 0 0 1000px transparent inset;transition:background-color 99999s ease 0s,color 99999s ease 0s;font-family:inherit}
 @keyframes blink{50%{opacity:0}}
 </style>
 </helmet>
