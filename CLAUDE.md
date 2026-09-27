@@ -35,7 +35,7 @@ There are two parts:
 | `mobileHandLayout` | "above" | Phone: hand `above`, `below` or `background` |
 | `mobileHandSize` | 1 | Phone hand scale |
 | `glow` | 0.7 | CRT glow strength everywhere |
-| `lensWarp` | true | Subtle wide-angle edge warp (desktop ≥1100px only) |
+| `lensWarp` | false | Subtle wide-angle edge warp (desktop ≥1100px only). Off for performance: it re-filters the hero and events sections every frame and roughly halves desktop frame rate. |
 | `scanlines` | true | Scanline overlay |
 | `preloader` / `introEveryLoad` | true / false | Loading screen; once per session unless introEveryLoad |
 | `customCursor` | true | Blinking block mouse cursor with X/Y readout (desktop mice only) |
@@ -52,7 +52,7 @@ There are two parts:
 - **Footer** (`data-screen-label="Footer"`, ~line 230): a `CONTACT` tag and the links `> INSTAGRAM`, `> TIKTOK`, `> SOUNDCLOUD`, `> EMAIL`, plus the © line.
 
 ## Key logic (method names, so you can search for them)
-- `drawHero(t)`: ASCII hand layout, cursor-heat glitch and float. It uses `buildGrid`, `buildFromImage` and `renderGrid` (top of the script).
+- `drawHero(t)`: ASCII hand layout, cursor-heat glitch and float. It uses `buildGrid`, `buildFromImage` and `renderGrid` (top of the script). Glowing glyphs are drawn from one pre-rendered atlas canvas per size/colour (`glyphAtlas`).
 - `drawGlobe(t)` / `drawGlobeText`: a 19s globe loop. It spins to Australia, targets Sydney, zooms in with the analysis, zooms out, then makes one full rotation. It has phosphor trails and a faint scope grid, and country outlines load from jsdelivr world-atlas.
 - `tickGraph(now)`: the jagged 3-line data graph.
 - `initBoot` / `drawBoot` / `exitBoot`: the preloader and the CRT switch-off exit.
