@@ -42,8 +42,8 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}">
     <div style="position:absolute;left:clamp(16px,3vw,40px);right:clamp(16px,3vw,40px);bottom:clamp(20px,4vw,40px);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 24px">
       <div style="display:flex;flex-direction:column;gap:10px">
-        <span ref="{{ bootMsg }}" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase">Locating subject</span>
-        <span ref="{{ bootBar }}" aria-hidden="true" style="display:block;font-size:13px;line-height:1;letter-spacing:0;white-space:pre"></span>
+        <div ref="{{ bootMsg }}" style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;white-space:pre;line-height:1.6;height:11.2em;width:280px;max-width:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;text-align:left"></div>
+        <canvas ref="{{ bootBar }}" aria-hidden="true" style="display:block;width:280px;max-width:100%;height:56px"></canvas>
       </div>
       <span ref="{{ bootPct }}" style="font-size:clamp(56px,10vw,140px);font-weight:400;letter-spacing:0;line-height:.8;font-variant-numeric:tabular-nums">000</span>
     </div>
@@ -51,8 +51,8 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     <sc-if value="{{ isMobileView }}" hint-placeholder-val="{{ false }}">
     <div style="position:absolute;left:clamp(16px,3vw,40px);right:clamp(16px,3vw,40px);bottom:clamp(28px,6vh,64px);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
       <span ref="{{ bootPct }}" style="font-size:clamp(48px,8vw,110px);font-weight:400;letter-spacing:0;line-height:.8;font-variant-numeric:tabular-nums">000</span>
-      <span ref="{{ bootBar }}" aria-hidden="true" style="display:block;font-size:12px;line-height:1;letter-spacing:0;white-space:pre"></span>
-      <span ref="{{ bootMsg }}" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase">Locating subject</span>
+      <canvas ref="{{ bootBar }}" aria-hidden="true" style="display:block;width:240px;max-width:100%;height:48px"></canvas>
+      <div ref="{{ bootMsg }}" style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;white-space:pre;line-height:1.6;height:11.2em;width:240px;max-width:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;text-align:left"></div>
     </div>
     </sc-if>
   </div>
@@ -1122,7 +1122,7 @@ class Component extends DCLogic {
   }
 
   initBoot() {
-    this.bp = 0; this.bDone = 0; this.bLast = 0; this.corners = 0; this.bcol = "#7FE9F0"; this.bctx = null; this.exiting = false;
+    this.bp = 0; this.bDone = 0; this.bLast = 0; this.bootLog = [{ text: "Boot surround.exe", t0: performance.now(), ok: true }]; this.bootStage = -1; this.logDone = false; this.corners = 0; this.bcol = "#7FE9F0"; this.bctx = null; this.exiting = false;
     if (!this.bg) this.bg = buildGrid(48);
     this.bPlaced = false;
   }
@@ -1164,43 +1164,67 @@ class Component extends DCLogic {
       const stall = Math.sin(now / 370) > 0.8;
       this.bp = Math.min(174, this.bp + dt * (174 / (window.innerWidth < 640 ? 3.5 : 5.45)) * (stall ? 0.05 : 0.5 + Math.random() * 1.2));
       const msgs = ["Calibrating low-end", "Loading doubles", "Reloading gunfingers", "Preparing frog lasers", "Sub bass detected"];
-      if (this.bootMsg.current) this.bootMsg.current.textContent = msgs[Math.min(4, Math.floor(this.bp / 34.8))];
-      if (this.bp >= 174) { this.bDone = now; if (this.bootMsg.current) this.bootMsg.current.textContent = "Loading complete"; }
+      this.logStage(Math.min(4, Math.floor(this.bp / 34.8)), msgs, now);
+      if (this.bp >= 174) this.bDone = now;
     } else {
       const since = now - this.bDone;
       if (since > 1100) this.exitBoot();
     }
-    if (this.bootBar.current && now - (this.barLast || 0) > 33) { this.barLast = now; this.bootBar.current.innerHTML = this.asciiWaveBar(now / 1000); }
+    if (this.bp >= 174 && !this.logDone) { this.logDone = true; this.logLine("Loading complete", now, true); this.logLine("Run surround.exe", now + 380, false); }
+    if (this.bootBar.current && now - (this.barLast || 0) > 33) { this.barLast = now; this.drawWaveBar(this.bootBar.current, now / 1000); this.renderBootLog(now); }
     if (this.bootPct.current) this.bootPct.current.textContent = String(Math.floor(this.bp)).padStart(3, "0");
   }
 
-  // The loading bar is an ASCII oscilloscope, drawn with the hand's character set: loaded columns show a live waveform
-  // mirrored around a centre line, unloaded columns a dim flat line. It fills left to right as the counter climbs.
-  asciiWaveBar(t) {
-    const mobile = window.innerWidth < 640, COLS = mobile ? 30 : 36, ROWS = 7, C = 3;
-    const tt = this.reduce ? t * 0.1 : t, loaded = Math.round(Math.min(1, (this.bp || 0) / 174) * COLS);
-    const pulse = this.reduce ? 1 : 0.7 + 0.3 * Math.sin(tt * Math.PI * 2 * (174 / 60) / 2);
-    const amp = [];
-    for (let x = 0; x < COLS; x++) {
-      const u = x / COLS;
-      const w = 0.6 * Math.sin(Math.PI * 2 * (u * 2.2 - tt * 0.7)) + 0.3 * Math.sin(Math.PI * 2 * (u * 5.3 + tt * 1.9)) + 0.18 * Math.sin(u * 60 + tt * 23);
-      amp.push(Math.min(1, (0.18 + Math.abs(w) * 0.95) * pulse));
-    }
-    const rows = [];
-    for (let r = 0; r < ROWS; r++) {
-      const d = Math.abs(r - C); let on = "", off = "";
-      for (let x = 0; x < COLS; x++) {
-        if (x >= loaded) { off += r === C ? "-" : " "; continue; }
-        const hh = amp[x] * (C + 0.95), f = hh - d;
-        on += d === 0 ? (amp[x] > 0.15 ? "#" : "=") : f > 0.9 ? "#" : f > 0.55 ? "*" : f > 0.25 ? ":" : f > 0.05 ? "." : " ";
-      }
-      rows.push(on + (off ? '<span style="opacity:.35">' + off + "</span>" : ""));
-    }
-    return rows.join("\n");
+  // Boot log: status messages are typed in as new command lines, like a program starting up. When a stage
+  // finishes, its line gets "... OK" and the next command appears below it; older lines scroll up.
+  logLine(text, t0, ok) {
+    const L = this.bootLog || (this.bootLog = []);
+    if (L.length) L[L.length - 1].ok = true;
+    L.push({ text, t0, ok: !!ok });
+  }
+
+  logStage(stage, msgs, now) {
+    if (stage === this.bootStage) return;
+    this.bootStage = stage; this.logLine(msgs[stage], now, false);
+  }
+
+  renderBootLog(now) {
+    const el = this.bootMsg.current, L = this.bootLog; if (!el || !L) return;
+    const cursor = Math.floor(now / 420) % 2 ? "█" : " ";
+    el.innerHTML = L.filter(l => now >= l.t0).map((l, i, arr) => {
+      const n = Math.max(0, Math.floor((now - l.t0) / 16)), typed = l.text.slice(0, n), done = n >= l.text.length;
+      const last = i === arr.length - 1;
+      return "<div>&gt; " + typed + (done && l.ok ? '<span style="opacity:.55"> ... OK</span>' : "") + (last && (!done || !l.ok) ? cursor : "") + "</div>";
+    }).join("");
+  }
+
+  // The loading bar is a dotted digital oscilloscope: loaded samples trace a live waveform (with two faint trailing
+  // echoes for phosphor persistence), unloaded samples sit on a dim flat line. It fills left to right as the counter climbs.
+  drawWaveBar(cv, t) {
+    const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return;
+    const dpr = Math.min(SCOPE_DPR, window.devicePixelRatio || 1);
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    const STEP = 4, R = 2, N = Math.floor((W - R) / STEP) + 1, mid = H / 2, A = H / 2 - R - 1;
+    const loaded = Math.round(Math.min(1, (this.bp || 0) / 174) * N), tt = this.reduce ? t * 0.1 : t;
+    const wave = (u, tm) => {
+      const pulse = this.reduce ? 1 : 0.7 + 0.3 * Math.sin(tm * Math.PI * (174 / 60));
+      const w = 0.6 * Math.sin(Math.PI * 2 * (u * 2.2 - tm * 0.7)) + 0.3 * Math.sin(Math.PI * 2 * (u * 5.3 + tm * 1.9)) + 0.12 * Math.sin(u * 70 + tm * 23);
+      return Math.max(-1, Math.min(1, w)) * pulse * Math.min(1, u * N / 3);
+    };
+    ctx.fillStyle = "#7FE9F0";
+    [[0.12, 0.18], [0.06, 0.35], [0, 1]].forEach(([lag, alpha]) => {
+      ctx.globalAlpha = alpha; ctx.beginPath();
+      for (let i = 0; i < loaded; i++) { const u = i / (N - 1), y = mid - wave(u, tt - lag) * A; ctx.rect(i * STEP, y - R / 2, R, R); }
+      ctx.fill();
+    });
+    ctx.globalAlpha = 0.3; ctx.beginPath();
+    for (let i = loaded; i < N; i++) ctx.rect(i * STEP, mid - R / 2, R, R);
+    ctx.fill(); ctx.globalAlpha = 1;
   }
 
   skipBoot = () => {
-    if (this.bp < 174) { this.bp = 174; this.bDone = performance.now() - 500; if (this.bootMsg.current) this.bootMsg.current.textContent = "Loading complete"; }
+    if (this.bp < 174) { this.bp = 174; this.bDone = performance.now() - 500; }
     else this.exitBoot();
   };
 
