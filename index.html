@@ -1178,7 +1178,7 @@ class Component extends DCLogic {
 
     if (this.bp < 174) {
       const stall = Math.sin(now / 370) > 0.8;
-      this.bp = Math.min(174, this.bp + dt * (174 / (window.innerWidth < 640 ? 4.8 : 6.8)) * (stall ? 0.05 : 0.5 + Math.random() * 1.2));
+      this.bp = Math.min(174, this.bp + dt * (174 / (window.innerWidth < 640 ? 3.5 : 5.45)) * (stall ? 0.05 : 0.5 + Math.random() * 1.2));
       const msgs = ["Calibrating low-end", "Loading doubles", "Reloading gunfingers", "Preparing frog lasers", "Sub bass detected"];
       if (this.bootMsg.current) this.bootMsg.current.textContent = msgs[Math.min(4, Math.floor(this.bp / 34.8))];
       if (this.bp >= 174) { this.bDone = now; if (this.bootMsg.current) this.bootMsg.current.textContent = "Loading complete"; }
