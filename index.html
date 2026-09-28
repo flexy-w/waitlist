@@ -119,7 +119,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
           
           </sc-if>
           <sc-if value="{{ isConsent }}" hint-placeholder-val="{{ false }}">
-          <label for="hs-consent" style="position:relative;flex:1 1 100%;display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:clamp(14px,3.8vw,17px);line-height:1.5;max-width:640px;padding:4px 0">
+          <label for="hs-consent" style="position:relative;flex:1 1 100%;display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:clamp(14px,3.8vw,17px);line-height:1.5;max-width:720px;padding:4px 0">
             <input id="hs-consent" ref="{{ consentRef }}" type="checkbox" checked="{{ consent }}" onChange="{{ onConsent }}" onKeyDown="{{ onConsentKey }}" style="position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;margin:0">
             <span aria-hidden="true" style="flex:0 0 auto;padding:0 .2em;background:{{ boxBg }};color:{{ boxFg }};text-shadow:none">{{ boxMark }}</span>
             <span>{{ consentText }}</span>
@@ -1572,7 +1572,7 @@ class Component extends DCLogic {
   }
 
   consentText() {
-    return "GET NOTIFIED WHEN TICKETS GO ON SALE";
+    return "GET NOTIFIED WHEN TICKETS GO LIVE, PLUS UPDATES ABOUT THE EVENT";
   }
 
   async joinOverflow(email) {
