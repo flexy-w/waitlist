@@ -600,6 +600,8 @@ class Component extends DCLogic {
     this.onMsg = e => { const d = e.data; if (d && d.type === "SURROUNDMobileOffsets") { this.hW = null; this.setState({ mOff: d.v }); } };
     window.addEventListener("message", this.onMsg);
     window.addEventListener("mousemove", this.onMove);
+    this.onScrollPerf = () => { this.lastScrollAt = performance.now(); };
+    window.addEventListener("scroll", this.onScrollPerf, { passive: true });
     window.addEventListener("touchmove", this.onMove, { passive: true });
     window.addEventListener("touchstart", this.onMove, { passive: true });
     document.addEventListener("mouseover", this.onOver);
@@ -627,7 +629,7 @@ class Component extends DCLogic {
   componentWillUnmount() {
     this._unmounting = true; this.stopRadio(); this.stopPong();
     cancelAnimationFrame(this.raf); clearInterval(this.timer); clearInterval(this.fast); clearInterval(this.lensIv); clearTimeout(this.rgTimer); window.removeEventListener("resize", this.onResize); window.removeEventListener("message", this.onMsg); clearInterval(this.logTimer);
-    window.removeEventListener("mousemove", this.onMove);
+    window.removeEventListener("mousemove", this.onMove); window.removeEventListener("scroll", this.onScrollPerf);
     window.removeEventListener("touchmove", this.onMove);
     document.removeEventListener("mouseover", this.onOver);
     document.documentElement.removeEventListener("mouseleave", this.onLeave);
@@ -743,7 +745,9 @@ class Component extends DCLogic {
 
   frame(now) {
     if (document.hidden) return;
-    const minDt = this.reduce ? 250 : this.state.mobile ? 50 : 33;
+    // While the page is actively scrolling, canvas animations redraw at half rate so the scroll itself stays smooth.
+    const scrolling = now - (this.lastScrollAt || 0) < 150;
+    const minDt = (this.reduce ? 250 : this.state.mobile ? 50 : 33) * (scrolling ? 2 : 1);
     if (now - this.lastHero > minDt) { this.lastHero = now; this.tickGraph(now); this.drawGlobe(now / 1000); }
     if (now - (this.lastHand || 0) > Math.max(minDt, HAND_MS)) { this.lastHand = now; this.drawHero(now / 1000); }
     if (this.state.booting) this.drawBoot(now);
