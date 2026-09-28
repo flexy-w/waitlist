@@ -204,7 +204,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));border-top:1px solid rgba(127,233,240,.5);text-transform:uppercase;box-shadow:0 0 10px rgba(127,233,240,calc(.35 * var(--g,1))),inset 0 0 10px rgba(127,233,240,calc(.12 * var(--g,1)))">
       <div style="display:flex;flex-direction:column;min-width:0;border-right:1px solid rgba(127,233,240,.5);box-shadow:0 0 10px rgba(127,233,240,calc(.35 * var(--g,1))),inset 0 0 10px rgba(127,233,240,calc(.12 * var(--g,1)))">
         <div style="display:flex;justify-content:space-between;gap:8px;padding:4px 10px;font-size:10px;letter-spacing:.08em;background:#7FE9F0;color:var(--bsod,#040805);text-shadow:none;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))"><span>GRAPH DATA</span><span>LIVE SIGNAL STREAM</span></div>
-        <div style="position:relative;height:170px;margin:10px"><canvas ref="{{ graphCanvas }}" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div>
+        <div style="position:relative;height:176px;margin:10px"><canvas ref="{{ graphCanvas }}" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div>
       </div>
       <div style="display:flex;flex-direction:column;min-width:0">
         <div style="padding:4px 10px;font-size:10px;letter-spacing:.08em;background:#7FE9F0;color:var(--bsod,#040805);text-shadow:none;text-align:center;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))">DATA CONSOLE OUTPUT</div>
@@ -1126,12 +1126,10 @@ class Component extends DCLogic {
     // Controls are static (like a synth panel at rest): meter at 72%, wavetable position at 20%. Only the waves move.
     const level = 0.72, pos = 0.2;
     // Grid: header row, plot area (meter | stack | slider), footer labels, parameter row.
-    const HEAD = 9, PT = 22, FOOT = H - 26, ROW = H - 8, ML = 10, SR = W - 12;
+    const HEAD = 15, PT = 28, FOOT = H - 26, ROW = H - 8, ML = 10, SR = W - 12;
     const PL = 28, PR = 34, pw = W - PL - PR, ph = FOOT - 6 - PT;
     ctx.font = FONT; ctx.textBaseline = "middle"; ctx.fillStyle = C;
-    ctx.globalAlpha = 0.9; ctx.textAlign = "left";
-    ctx.fillText(narrow ? "SUB BASS ▾ | REESE 174 ▾" : "SUB BASS ▾  |  REESE 174 ▾", 4, HEAD);
-    ctx.textAlign = "right"; ctx.fillText(lv ? "FFT  ◂ ▸" : "◂ ▸", W - 4, HEAD);
+    ctx.globalAlpha = 0.9; ctx.textAlign = "right"; ctx.fillText(lv ? "FFT  ◂ ▸" : "◂ ▸", W - 4, HEAD);
     ctx.textAlign = "left"; ctx.globalAlpha = 0.75;
     ctx.fillText(narrow ? "CLASSIC ▾  PW 0.0%  SYNC 10%  SEMI -12" : "CLASSIC ▾   PW 0.0%   SYNC 10%   |   SEMI -12 ST   DET 20 CT", 4, ROW);
     // level meter (static): "C" marker above, value below
