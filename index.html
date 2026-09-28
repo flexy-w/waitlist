@@ -150,13 +150,19 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
       </div>
     </sc-if>
     <sc-if value="{{ hypeOn }}" hint-placeholder-val="{{ true }}">
-      <div aria-hidden="true" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:16px;max-width:720px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-variant-numeric:tabular-nums;opacity:.9">
-        <span style="width:6px;height:6px;background:#3DFF6E;box-shadow:0 0 6px #3DFF6E;animation:blink 1.2s steps(1) infinite"></span>
-        <span><span ref="{{ hypeTotal }}" style="padding:0 .2em;transition:background .6s,color .6s">—</span> SIGNALS DETECTED</span>
-        <span style="opacity:.45">//</span>
-        <span>+<span ref="{{ hypeHour }}">—</span> IN THE LAST HOUR</span>
-        <span style="opacity:.45">//</span>
-        <span ref="{{ hypeLast }}">—</span>
+      <div aria-hidden="true" style="display:flex;flex-direction:column;gap:8px;margin-top:16px;width:min(100%,420px);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-variant-numeric:tabular-nums">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;opacity:.9">
+          <span style="width:6px;height:6px;background:#3DFF6E;box-shadow:0 0 6px #3DFF6E;animation:blink 1.2s steps(1) infinite"></span>
+          <span><span ref="{{ hypeTotal }}" style="padding:0 .2em;transition:background .6s,color .6s">—</span> REGISTERED</span>
+          <span style="opacity:.45">//</span>
+          <span ref="{{ hypeToday }}">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="flex:0 0 auto;opacity:.75">CAPACITY</span>
+          <span style="flex:1 1 auto;height:8px;border:1px solid rgba(127,233,240,.6);position:relative;overflow:hidden;box-shadow:0 0 10px rgba(127,233,240,calc(.35 * var(--g,1)))"><span ref="{{ capFill }}" style="position:absolute;left:0;top:0;bottom:0;width:0;transition:width .8s,background .8s"></span></span>
+          <span ref="{{ capPct }}" style="flex:0 0 auto;min-width:3.5ch;text-align:right">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:10px;opacity:.75"><span ref="{{ capCount }}">—</span><span ref="{{ capNote }}"></span></div>
       </div>
     </sc-if>
   </div>
@@ -347,6 +353,10 @@ function hypeArrivals(m) {
   return Math.floor(lambda + hash01(m, 1));
 }
 const hypeSecond = m => Math.floor(hash01(m, 2) * 60);
+// Waitlist capacity steps up through venue-sized numbers. A step "expands" when the count reaches 97% of it, so the bar
+// climbs, shows ALMOST FULL from 90%, then drops back as the next capacity opens (flagged CAPACITY EXPANDED for 12h).
+const CAP_STEPS = [300, 500, 800, 1200, 1800, 2500, 3500, 5000, 7500, 10000];
+const capFor = n => CAP_STEPS.find(c => n < c * 0.97) || Math.ceil(n / 0.9 / 1000) * 1000;
 // Canvas resolution caps: the soft phosphor art looks the same slightly below full Retina resolution, for far fewer pixels per frame.
 const HAND_DPR = 1.5, SCOPE_DPR = 1.25;
 // The hand redraws at 20fps (its float and shimmer are slow), the globe and graph at 30fps.
@@ -595,7 +605,7 @@ class Component extends DCLogic {
 
   constructor(p) {
     super(p);
-    ["root", "fullOk", "consentRef", "hypeTotal", "hypeHour", "hypeLast", "hero", "heroCanvas", "boot", "bootCanvas", "bootPct", "bootBar", "bootMsg", "bootCorners", "clock", "queue", "cdD", "cdH", "cdM", "cdS", "cursor", "cursorBox", "cursorLbl", "emailRef", "hudHex", "hudUp", "hudSig", "hudNode", "hudDb", "hudLat", "hudPkt", "hudEq", "hudCoord", "cdLine", "artWrap", "artCanvas", "artLabel", "globeWrap", "globeCanvas", "globeStatus", "globeZoom", "heroText", "hudWrap", "handSlot", "radioEq", "waveCanvas", "lensImg", "lensDisp", "lensImgX", "lensDispX", "pongCanvas", "pongWrap", "pongP", "pongC", "graphCanvas", "cX", "cY", "cZ", "gaugeL", "gaugeR"].forEach(k => (this[k] = React.createRef()));
+    ["root", "fullOk", "consentRef", "hypeTotal", "hypeToday", "capFill", "capPct", "capCount", "capNote", "hero", "heroCanvas", "boot", "bootCanvas", "bootPct", "bootBar", "bootMsg", "bootCorners", "clock", "queue", "cdD", "cdH", "cdM", "cdS", "cursor", "cursorBox", "cursorLbl", "emailRef", "hudHex", "hudUp", "hudSig", "hudNode", "hudDb", "hudLat", "hudPkt", "hudEq", "hudCoord", "cdLine", "artWrap", "artCanvas", "artLabel", "globeWrap", "globeCanvas", "globeStatus", "globeZoom", "heroText", "hudWrap", "handSlot", "radioEq", "waveCanvas", "lensImg", "lensDisp", "lensImgX", "lensDispX", "pongCanvas", "pongWrap", "pongP", "pongC", "graphCanvas", "cX", "cY", "cZ", "gaugeL", "gaugeR"].forEach(k => (this[k] = React.createRef()));
     this.queueN = (p && p.queueBase != null ? p.queueBase : 78) - 1;
     this.mouse = { x: -9999, y: -9999 };
   }
@@ -798,7 +808,9 @@ class Component extends DCLogic {
     let today = cur; for (let m = Math.max(0, midnight); m < mNow; m++) today += hypeArrivals(m);
     let last = null;
     for (let m = mNow; m >= Math.max(0, mNow - 600); m--) { if (m === mNow && !cur) continue; if (hypeArrivals(m)) { last = Math.round((ms - (HYPE_LAUNCH + m * 60000 + hypeSecond(m) * 1000)) / 1000); break; } }
-    return { total: base + H.cum + cur + (this.hypeSelf || 0), hour, last, today: today + (this.hypeSelf || 0) };
+    const total = base + H.cum + cur + (this.hypeSelf || 0);
+    let past = total; for (let m = Math.max(0, mNow - 720); m <= mNow; m++) past -= m === mNow ? cur : hypeArrivals(m);
+    return { total, hour, last, today: today + (this.hypeSelf || 0), cap: capFor(total), expanded: capFor(past) !== capFor(total) };
   }
 
   tickHype() {
@@ -808,9 +820,12 @@ class Component extends DCLogic {
       const bump = el.textContent !== "—"; el.textContent = txt;
       if (bump && !this.reduce) { el.style.background = "#7FE9F0"; el.style.color = "var(--bsod,#040805)"; clearTimeout(this.hypeFlash); this.hypeFlash = setTimeout(() => { el.style.background = ""; el.style.color = ""; }, 700); }
     }
-    if (this.hypeHour.current) this.hypeHour.current.textContent = String(st.hour);
-    // Third slot: the last arrival while it is recent, otherwise today's tally (so a quiet stretch never reads as dead).
-    if (this.hypeLast.current) this.hypeLast.current.textContent = st.last != null && st.last < 900 ? "LAST SIGNAL " + (st.last < 60 ? st.last + "S" : Math.floor(st.last / 60) + "M") + " AGO" : "+" + st.today + " TODAY";
+    if (this.hypeToday.current) this.hypeToday.current.textContent = "+" + st.today + " TODAY";
+    const pct = Math.min(100, Math.round(st.total / st.cap * 100)), hot = pct >= 90 && !st.expanded, col = hot ? "#FFB347" : "#7FE9F0";
+    if (this.capFill.current) { this.capFill.current.style.width = pct + "%"; this.capFill.current.style.background = "repeating-linear-gradient(90deg," + col + " 0 3px,transparent 3px 5px)"; }
+    if (this.capPct.current) { this.capPct.current.textContent = pct + "%"; this.capPct.current.style.color = col; }
+    if (this.capCount.current) this.capCount.current.textContent = st.total.toLocaleString("en-US") + " / " + st.cap.toLocaleString("en-US") + " SPOTS";
+    if (this.capNote.current) { const t = st.expanded ? "▲ CAPACITY EXPANDED" : hot ? "ALMOST FULL" : ""; if (this.capNote.current.textContent !== t) this.capNote.current.textContent = t; this.capNote.current.style.color = hot ? "#FFB347" : ""; this.capNote.current.style.animation = hot ? "blink 1s steps(1) infinite" : ""; }
   }
 
   frame(now) {
@@ -1675,7 +1690,7 @@ class Component extends DCLogic {
       "> QUEUE POSITION: #" + (pos || 0).toLocaleString("en-US")
     ];
     return {
-      root: this.root, hypeTotal: this.hypeTotal, hypeHour: this.hypeHour, hypeLast: this.hypeLast, hypeOn: this.props.hypeCounter ?? true, hero: this.hero, heroCanvas: this.heroCanvas, boot: this.boot, bootCanvas: this.bootCanvas,
+      root: this.root, hypeTotal: this.hypeTotal, hypeToday: this.hypeToday, capFill: this.capFill, capPct: this.capPct, capCount: this.capCount, capNote: this.capNote, hypeOn: this.props.hypeCounter ?? true, hero: this.hero, heroCanvas: this.heroCanvas, boot: this.boot, bootCanvas: this.bootCanvas,
       bootPct: this.bootPct, bootBar: this.bootBar, bootMsg: this.bootMsg, bootCorners: this.bootCorners,
       clock: this.clock, queue: this.queue, cdD: this.cdD, cdH: this.cdH, cdM: this.cdM, cdS: this.cdS,
       cursor: this.cursor, cursorBox: this.cursorBox, cursorLbl: this.cursorLbl, emailRef: this.emailRef, customCursor: this.props.customCursor ?? true, hudHex: this.hudHex, hudUp: this.hudUp, hudSig: this.hudSig, hudNode: this.hudNode, hudDb: this.hudDb, hudLat: this.hudLat, hudPkt: this.hudPkt, hudEq: this.hudEq, hudCoord: this.hudCoord, cdLine: this.cdLine, globeWrap: this.globeWrap, globeCanvas: this.globeCanvas, globeStatus: this.globeStatus, globeZoom: this.globeZoom, heroText: this.heroText, handSlot: this.handSlot, waveCanvas: this.waveCanvas, artWrap: this.artWrap, artCanvas: this.artCanvas, artLabel: this.artLabel, isMobileView: !!this.state.mobile, globeOrder: this.state.mobile ? "-1" : "0", evGap: this.state.mobile ? "16px" : "clamp(24px,3vw,40px)", rowPad: this.state.mobile ? "6px 0" : "14px 0", numSize: this.state.mobile ? "44px" : "63px", resAlign: this.state.mobile ? "stretch" : "flex-start",
