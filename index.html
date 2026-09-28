@@ -320,8 +320,6 @@ const STORE = "headspace_waitlist";
 const HAND_DPR = 1.5, SCOPE_DPR = 1.25;
 // The hand redraws at 20fps (its float and shimmer are slow), the globe and graph at 30fps.
 const HAND_MS = 50;
-// "The drop": after the counter hits 174, a 4-beat build at 174 BPM, then flash + cut + the loader hand flies into the hero.
-const BEAT_MS = 60000 / 174, BUILD_BEATS = 4, FLY_MS = 650;
 // Australian mobile (04xx / +614xx) normalised to +614xxxxxxxx, or any international number in +E.164 form.
 const normPhone = v => { const d = String(v || "").replace(/[\s\-().]/g, ""); const m = d.match(/^(?:\+?61|0)(4\d{8})$/); if (m) return "+61" + m[1]; return /^\+[1-9]\d{7,14}$/.test(d) ? d : null; };
 const WAITLIST_URL = "https://script.google.com/macros/s/AKfycbxcCwasuYrTX4i42LMVcvNFsjOYkv7x0x2SY8ODBw07EBY4w2QwmyhASXyhK113rHpvuQ/exec";
@@ -1129,7 +1127,7 @@ class Component extends DCLogic {
   }
 
   initBoot() {
-    this.bp = 0; this.bDone = 0; this.bLast = 0; this.corners = 0; this.bcol = "#7FE9F0"; this.bctx = null; this.exiting = false; this.dropAt = 0; this.fly = null; this.buildK = 0; this.buildP = 0;
+    this.bp = 0; this.bDone = 0; this.bLast = 0; this.corners = 0; this.bcol = "#7FE9F0"; this.bctx = null; this.exiting = false;
     if (!this.bg) this.bg = buildGrid(48);
     this.bPlaced = false;
   }
@@ -1153,11 +1151,7 @@ class Component extends DCLogic {
       this.bvx = sp * (Math.random() < 0.5 ? -1 : 1); this.bvy = sp * 0.8 * (Math.random() < 0.5 ? -1 : 1);
     }
     const dt = this.bLast ? Math.min(0.05, (now - this.bLast) / 1000) : 0; this.bLast = now;
-    const building = this.bDone && !this.dropAt;
-    if (building) { const bt = (now - this.bDone) / BEAT_MS; this.buildP = Math.min(1, bt / BUILD_BEATS); this.buildK = Math.exp(-(bt % 1) * 6); } else { this.buildK = 0; }
-    if (this.dropAt) return this.drawFlight(now, W, H);
-    const vm = building ? 1 + 1.4 * this.buildP : 1;
-    this.bx += this.bvx * dt * vm; this.by += this.bvy * dt * vm;
+    this.bx += this.bvx * dt; this.by += this.bvy * dt;
     let hx = false, hy = false;
     if (this.bx + x0 <= 0) { this.bx = -x0; this.bvx = Math.abs(this.bvx); hx = true; }
     if (this.bx + x1 >= W) { this.bx = W - x1; this.bvx = -Math.abs(this.bvx); hx = true; }
@@ -1187,14 +1181,10 @@ class Component extends DCLogic {
       this.bp = Math.min(174, this.bp + dt * (174 / (window.innerWidth < 640 ? 4.8 : 6.8)) * (stall ? 0.05 : 0.5 + Math.random() * 1.2));
       const msgs = ["Calibrating low-end", "Loading doubles", "Reloading gunfingers", "Preparing frog lasers", "Sub bass detected"];
       if (this.bootMsg.current) this.bootMsg.current.textContent = msgs[Math.min(4, Math.floor(this.bp / 34.8))];
-      if (this.bp >= 174) this.bDone = now;
+      if (this.bp >= 174) { this.bDone = now; if (this.bootMsg.current) this.bootMsg.current.textContent = "Loading complete"; }
     } else {
-      const beats = (now - this.bDone) / BEAT_MS;
-      if (beats >= BUILD_BEATS) { this.drop(now); return; }
-      if (this.bootMsg.current) this.bootMsg.current.textContent = "Loading complete // drop in " + (BUILD_BEATS - Math.floor(beats));
-      const fl = String(0.35 + 0.65 * this.buildK);
-      if (this.bootBar.current) this.bootBar.current.style.opacity = fl;
-      if (this.bootPct.current) this.bootPct.current.style.opacity = fl;
+      const since = now - this.bDone;
+      if (since > 1100) this.exitBoot();
     }
     const n = Math.round(this.bp / 174 * 20);
     if (this.bootBar.current) this.bootBar.current.textContent = "█".repeat(n) + "░".repeat(20 - n);
@@ -1212,7 +1202,7 @@ class Component extends DCLogic {
     // above the message + bar on desktop, above the counter on phones.
     const bar = this.bootBar.current, br = bar ? bar.getBoundingClientRect() : null;
     const Wf = br && br.width ? br.width : (mobile ? 190 : 260), depthH = Wf * 0.3, dxBack = Wf * 0.2;
-    const A = Wf * 0.14 * power * (1 + (0.25 + 0.5 * (this.buildP || 0)) * (this.buildK || 0));
+    const A = Wf * 0.14 * power;
     const anchorEl = mobile ? this.bootPct.current : this.bootMsg.current, ar = anchorEl ? anchorEl.getBoundingClientRect() : null;
     const frontY = (ar ? ar.top : H * 0.7) - 22 - A * 0.5;
     const cx = (br ? br.left : (W - Wf) / 2) + Wf / 2, cy = frontY - depthH / 2;
@@ -1245,74 +1235,30 @@ class Component extends DCLogic {
     ctx.restore();
   }
 
-  skipBoot = () => { this.drop(performance.now()); };
+  skipBoot = () => {
+    if (this.bp < 174) { this.bp = 174; this.bDone = performance.now() - 500; if (this.bootMsg.current) this.bootMsg.current.textContent = "Loading complete"; }
+    else this.exitBoot();
+  };
 
-  // Where the hero hand sits on screen, expressed as a position + cell size for the loader's (coarser) hand grid.
-  heroHandTarget() {
-    const L = this.hl, hg = this.hg, cv = this.heroCanvas.current, bg = this.bg;
-    if (!L || !hg || !cv || !bg || L.dim) return null;
-    const cr = cv.getBoundingClientRect(); if (!cr.width) return null;
-    const t = performance.now() / 1000;
-    const fy = this.reduce ? 0 : Math.sin(t * 0.8) * Math.max(2, L.ch * 0.6) + Math.sin(t * 0.37) * 1.2, fx = this.reduce ? 0 : Math.sin(t * 0.5 + 1) * 1.2;
-    const left = cr.left + L.ox + fx + hg.minC * L.cw, top = cr.top + L.oy + fy + hg.minR * L.ch, width = (hg.maxC - hg.minC + 1) * L.cw;
-    const cw = width / (bg.maxC - bg.minC + 1);
-    return { x: left - bg.minC * cw, y: top - bg.minR * cw * 1.8, cw };
-  }
-
-  drop(now) {
-    if (this.dropAt || this.exiting) return;
-    const el = this.boot.current; if (!el) return;
-    this.dropAt = now; this.exiting = true;
-    const target = this.reduce ? null : this.heroHandTarget();
-    const hc = this.heroCanvas.current;
-    if (target && hc) {
-      this.fly = { x0: this.bx, y0: this.by, cw0: this.bcw, x1: target.x, y1: target.y, cw1: target.cw };
-      hc.style.opacity = "0";
-    }
-    // Cut: the loader background and readout vanish, leaving only the hand (on its own canvas) over the site.
-    el.style.background = "transparent"; el.style.pointerEvents = "none";
-    [...el.children].forEach(c => { if (c !== this.bootCanvas.current) c.style.visibility = "hidden"; });
-    const r = this.root.current, heroSec = r && r.querySelector('section[data-screen-label="Hero"]');
-    if (!this.reduce && el.animate) {
-      const f = document.createElement("div");
-      f.style.cssText = "position:absolute;inset:0;background:#F2FFFF;pointer-events:none";
-      el.appendChild(f);
-      f.animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 320, easing: "cubic-bezier(.2,.7,.2,1)", fill: "forwards" });
-      if (heroSec && heroSec.animate) heroSec.animate([{ filter: "brightness(2.6)" }, { filter: "brightness(1)" }], { duration: 480, easing: "ease-out" });
-    }
-    this.revealPage(this.reduce ? 0 : -300, !!this.fly);
-    if (!this.fly) this.finishBoot(this.reduce ? 300 : 200);
-  }
-
-  drawFlight(now, W, H) {
-    const ctx = this.bctx, F = this.fly; if (!ctx) return;
-    ctx.clearRect(0, 0, W, H);
-    if (!F) return;
-    const p = Math.min(1, (now - this.dropAt) / FLY_MS), e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-    const cw = F.cw0 + (F.cw1 - F.cw0) * e, x = F.x0 + (F.x1 - F.x0) * e, y = F.y0 + (F.y1 - F.y0) * e;
-    ctx.save(); ctx.shadowColor = "#7FE9F0"; ctx.shadowBlur = Math.max(3, cw * 1.4);
-    renderGrid(ctx, this.bg, x, y, cw, cw * 1.8, cw / 0.6, now / 1000, "#7FE9F0", this.blue(), false);
-    ctx.restore();
-    if (p >= 1 && !this.flyDone) { this.flyDone = true; this.finishBoot(180); }
-  }
-
-  finishBoot(fadeMs) {
-    const el = this.boot.current, hc = this.heroCanvas.current;
-    if (hc) { hc.style.opacity = ""; if (hc.animate && this.fly) hc.animate([{ opacity: 0 }, { opacity: 1 }], { duration: fadeMs }); }
-    if (el && el.animate) el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeMs, fill: "forwards" });
-    setTimeout(() => {
-      try { sessionStorage.setItem("hs_booted", "1"); } catch (e) {}
-      this.fly = null; this.flyDone = false;
-      this.setState({ booting: false }, () => { const hw = this.hudWrap.current; if (hw && hw.animate) hw.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 700, delay: 200, fill: "backwards" }); });
-      setTimeout(() => this.scrambleAll(), 300);
-    }, fadeMs);
-  }
-
-  revealPage(shift = 0, skipHand = false) {
+  revealPage() {
     const r = this.root.current; if (!r || !r.animate) return;
     const hero = r.querySelector('section[data-screen-label="Hero"]'); if (!hero) return;
-    const els = [hero.querySelector("header"), skipHand ? null : this.hero.current, ...(this.heroText.current ? this.heroText.current.children : [])].filter(Boolean);
-    els.forEach((e, i) => e.animate([{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], { duration: 520, delay: Math.max(0, 520 + shift + i * 110), easing: "cubic-bezier(.2,.7,.2,1)", fill: "backwards" }));
+    const els = [hero.querySelector("header"), this.hero.current, ...(this.heroText.current ? this.heroText.current.children : [])].filter(Boolean);
+    els.forEach((e, i) => e.animate([{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], { duration: 520, delay: 520 + i * 110, easing: "cubic-bezier(.2,.7,.2,1)", fill: "backwards" }));
+  }
+
+  exitBoot() {
+    if (this.exiting) return; this.exiting = true;
+    const el = this.boot.current; if (!el) return;
+    this.revealPage();
+    if (el.animate) el.animate([
+      { transform: "scale(1,1)", filter: "brightness(1)", opacity: 1 },
+      { transform: "scale(1,.006)", filter: "brightness(3)", opacity: 1, offset: .55 },
+      { transform: "scale(.002,.006)", filter: "brightness(5)", opacity: 1, offset: .85 },
+      { transform: "scale(0,0)", filter: "brightness(5)", opacity: 0 }
+    ], { duration: 700, easing: "cubic-bezier(.6,0,.4,1)", fill: "forwards" });
+    else el.style.opacity = 0;
+    setTimeout(() => { try { sessionStorage.setItem("hs_booted", "1"); } catch (e) {} this.setState({ booting: false }, () => { const hw = this.hudWrap.current; if (hw && hw.animate) hw.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 700, delay: 600, fill: "backwards" }); }); setTimeout(() => this.scrambleAll(), 450); }, 820);
   }
 
   reboot() {
