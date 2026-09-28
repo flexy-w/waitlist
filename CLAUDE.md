@@ -55,7 +55,7 @@ There are two parts:
 - `drawHero(t)`: ASCII hand layout, cursor-heat glitch and float. It uses `buildGrid`, `buildFromImage` and `renderGrid` (top of the script). Glowing glyphs are drawn from one pre-rendered atlas canvas per size/colour (`glyphAtlas`).
 - `drawGlobe(t)` / `drawGlobeText`: a 19s globe loop. It spins to Australia, targets Sydney, zooms in with the analysis, zooms out, then makes one full rotation. It has phosphor trails and a faint scope grid, and country outlines load from jsdelivr world-atlas.
 - `tickGraph(now)`: the jagged 3-line data graph.
-- `initBoot` / `drawBoot` / `exitBoot`: the preloader and the CRT switch-off exit. `drawWavetable(ctx, W, H, t)` draws the loader's dotted waveform surface (rows batched into one path each; sines from `fsin` lookup table).
+- `initBoot` / `drawBoot` / `drop` / `drawFlight` / `finishBoot`: the preloader and "the drop" exit. At 174 a 4-beat build runs at 174 BPM (`BEAT_MS`, `BUILD_BEATS`: countdown message, bar/counter flash on the beat, wavetable pumps, hand speeds up), then `drop()` flashes white, cuts the loader background away, and the loader hand flies (`FLY_MS`) to the hero hand's position (`heroHandTarget`) before handing over. Click/tap skips straight to the drop; reduced motion gets a plain fade. `drawWavetable(ctx, W, H, t)` draws the loader's dotted waveform surface (rows batched into one path each; sines from `fsin` lookup table).
 - `startRadio` / `stopRadio` / `startSynth`: the radio toggle (Web Audio).
 - `redactGlitch()`: an occasional scramble on [REDACTED] tags, drawn as an overlay so the layout never moves.
 - `buildLens` / `syncLens`: the lens warp SVG filter.
