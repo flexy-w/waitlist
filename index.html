@@ -1145,6 +1145,14 @@ class Component extends DCLogic {
     ctx.globalAlpha = 1; ctx.fillStyle = AMBER; ctx.fillRect(SR, sy, 1, st + sh - sy);
     ctx.strokeStyle = AMBER; ctx.lineWidth = 1; ctx.strokeRect(SR - 3.5, sy - 3.5, 7, 7);
     ctx.fillStyle = C; ctx.globalAlpha = 0.9; ctx.textAlign = "right"; ctx.fillText(Math.round(pos * 100) + " %", W - 4, FOOT);
+    // ruler ticks: every 10% on the slider (longer at 0/50/100), six steps on the meter
+    ctx.globalAlpha = 0.4;
+    for (let k = 0; k <= 10; k++) { const y = Math.round(st + sh * k / 10) + 0.5, L = k % 5 ? 3 : 5; ctx.fillRect(SR - 2 - L, y, L, 1); }
+    for (let k = 0; k <= 6; k++) { const y = Math.round(mt + mh * k / 6) + 0.5; ctx.fillRect(ML + 6, y, 3, 1); }
+    // viewfinder brackets on the plot area
+    const bx0 = PL - 2, by0 = PT - 2, bx1 = W - PR + 2, by1 = FOOT - 10, BL = 6;
+    ctx.globalAlpha = 0.45;
+    [[bx0, by0, 1, 1], [bx1, by0, -1, 1], [bx0, by1, 1, -1], [bx1, by1, -1, -1]].forEach(([x, y, dx, dy]) => { ctx.fillRect(dx > 0 ? x : x - BL + 1, y, BL, 1); ctx.fillRect(x, dy > 0 ? y : y - BL + 1, 1, BL); });
     // frame stack
     const M = 18, N = Math.max(40, Math.min(96, Math.round(pw / 4.5)));
     const Wf = pw * 0.8, depthH = ph * 0.5, dxBack = pw * 0.16, A = ph * 0.3;
@@ -1159,6 +1167,12 @@ class Component extends DCLogic {
       }
     } else this.wfRows = null;
     const hj = Math.round(pos * (M - 1)), edgeL = [], edgeR = [];
+    // faint perspective floor under the stack
+    const fl = d => { const sc = 1 - 0.3 * d; return [x0 + d * dxBack + (Wf * (1 - sc)) / 2, y0 - d * depthH, Wf * sc]; };
+    ctx.strokeStyle = C; ctx.lineWidth = 1; ctx.globalAlpha = 0.09; ctx.beginPath();
+    for (let k = 0; k <= 6; k++) { const [fx, fy, fw] = fl(k / 6); ctx.moveTo(fx, fy + 0.5); ctx.lineTo(fx + fw, fy + 0.5); }
+    for (let k = 0; k <= 8; k++) { const u = k / 8, [ax, ay, aw] = fl(0), [bx, by, bw] = fl(1); ctx.moveTo(ax + u * aw, ay); ctx.lineTo(bx + u * bw, by); }
+    ctx.stroke();
     ctx.fillStyle = C;
     for (let j = M - 1; j >= 0; j--) {
       const d = j / (M - 1), sc = 1 - 0.3 * d, ox = x0 + d * dxBack + (Wf * (1 - sc)) / 2, oy = y0 - d * depthH;
@@ -1179,7 +1193,12 @@ class Component extends DCLogic {
       edgeL.push(pts[0], pts[1]); edgeR.push(pts[pts.length - 2], pts[pts.length - 1]);
       if (j === hj) {
         ctx.save(); ctx.strokeStyle = AMBER; ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.shadowColor = AMBER; ctx.shadowBlur = 5; ctx.globalAlpha = 1;
-        ctx.beginPath(); for (let k = 0; k < pts.length; k += 2) k ? ctx.lineTo(pts[k], pts[k + 1]) : ctx.moveTo(pts[k], pts[k + 1]); ctx.stroke(); ctx.restore();
+        ctx.beginPath(); for (let k = 0; k < pts.length; k += 2) k ? ctx.lineTo(pts[k], pts[k + 1]) : ctx.moveTo(pts[k], pts[k + 1]); ctx.stroke();
+        // read head: a bright dot travelling along the current frame, with a faint drop line to its baseline
+        const hi = Math.floor(((this.reduce ? 0.5 : (t * 0.22) % 1)) * (N - 1)) * 2, hx = pts[hi], hy = pts[hi + 1];
+        ctx.shadowBlur = 0; ctx.globalAlpha = 0.35; ctx.fillStyle = AMBER; ctx.fillRect(Math.round(hx), hy, 1, oy - hy);
+        ctx.globalAlpha = 1; ctx.fillStyle = "#F2FFFF"; ctx.shadowColor = AMBER; ctx.shadowBlur = 6; ctx.fillRect(hx - 1.5, hy - 1.5, 3, 3);
+        ctx.restore(); ctx.fillStyle = C;
         continue;
       }
       ctx.globalAlpha = (0.22 + 0.6 * (1 - d * 0.8)) * (Math.abs(j - hj) < 3 ? 1 : 0.8);
