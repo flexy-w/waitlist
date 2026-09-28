@@ -204,7 +204,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));border-top:1px solid rgba(127,233,240,.5);text-transform:uppercase;box-shadow:0 0 10px rgba(127,233,240,calc(.35 * var(--g,1))),inset 0 0 10px rgba(127,233,240,calc(.12 * var(--g,1)))">
       <div style="display:flex;flex-direction:column;min-width:0;border-right:1px solid rgba(127,233,240,.5);box-shadow:0 0 10px rgba(127,233,240,calc(.35 * var(--g,1))),inset 0 0 10px rgba(127,233,240,calc(.12 * var(--g,1)))">
         <div style="display:flex;justify-content:space-between;gap:8px;padding:4px 10px;font-size:10px;letter-spacing:.08em;background:#7FE9F0;color:var(--bsod,#040805);text-shadow:none;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))"><span>GRAPH DATA</span><span>LIVE SIGNAL STREAM</span></div>
-        <div style="position:relative;height:140px;margin:10px"><canvas ref="{{ graphCanvas }}" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div>
+        <div style="position:relative;height:170px;margin:10px"><canvas ref="{{ graphCanvas }}" style="position:absolute;inset:0;width:100%;height:100%"></canvas></div>
       </div>
       <div style="display:flex;flex-direction:column;min-width:0">
         <div style="padding:4px 10px;font-size:10px;letter-spacing:.08em;background:#7FE9F0;color:var(--bsod,#040805);text-shadow:none;text-align:center;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))">DATA CONSOLE OUTPUT</div>
@@ -1118,9 +1118,36 @@ class Component extends DCLogic {
   // the rows are morphing synth waveforms; with the radio on it becomes a live spectrum waterfall: a new spectrum
   // slice enters at the front every 70ms and scrolls back.
   drawPanelWavetable(ctx, W, H, now) {
-    const M = 18, N = Math.max(40, Math.min(96, Math.round(W / 4.5))), t = (this.reduce ? now * 0.1 : now) / 1000;
-    const Wf = W * 0.74, depthH = H * 0.5, dxBack = W * 0.2, A = H * 0.3, x0 = W * 0.04, y0 = H * 0.9, TAU = Math.PI * 2;
+    // Layout modelled on a synth wavetable oscillator: header row, level meter (left), 3D frame stack with the
+    // current frame highlighted, position slider (right), parameter row (bottom).
+    const narrow = W < 380, FONT = '9px "VCR OSD Mono", ui-monospace, monospace', C = "#7FE9F0", AMBER = "#FFB347";
+    const t = (this.reduce ? now * 0.1 : now) / 1000, TAU = Math.PI * 2;
     const lv = this.radioLevels();
+    const level = lv ? Math.min(1, lv.slice(0, 8).reduce((a, b) => a + b, 0) / 8 * 1.5) : 0.55 + 0.25 * Math.sin(t * 2.3) * Math.sin(t * 0.7);
+    const pos = lv ? 0 : 0.5 + 0.45 * Math.sin(t * 0.4);
+    const PL = 26, PR = 30, PT = 18, PB = 18, pw = W - PL - PR, ph = H - PT - PB;
+    ctx.font = FONT; ctx.textBaseline = "middle";
+    // header
+    ctx.fillStyle = C; ctx.globalAlpha = 0.9; ctx.textAlign = "left";
+    ctx.fillText(narrow ? "SUB BASS ▾ | REESE 174 ▾" : "SUB BASS ▾  |  REESE 174 ▾", 4, 6);
+    ctx.textAlign = "right"; ctx.fillText(lv ? "FFT  ◂ ▸" : "◂ ▸", W - 4, 6);
+    // parameter row
+    ctx.textAlign = "left"; ctx.globalAlpha = 0.75;
+    ctx.fillText(narrow ? "CLASSIC ▾  PW 0.0%  SYNC 10%  SEMI -12" : "CLASSIC ▾   PW 0.0%   SYNC 10%   |   SEMI -12 ST   DET 20 CT", 4, H - 5);
+    // level meter
+    const mx = 9, mt = PT + 12, mh = ph - 16;
+    ctx.globalAlpha = 0.25; ctx.fillRect(mx, mt, 4, mh);
+    ctx.globalAlpha = 0.95; ctx.fillRect(mx, mt + mh * (1 - level), 4, mh * level);
+    ctx.textAlign = "center"; ctx.globalAlpha = 0.9; ctx.fillText("C", mx + 2, PT + 3);
+    ctx.globalAlpha = 0.6; ctx.fillRect(mx - 3, PT + 8, 10, 1);
+    // position slider
+    const sx = W - 12, st = PT + 4, sh = ph - 14, sy = st + sh * (1 - pos);
+    ctx.globalAlpha = 0.35; ctx.fillRect(sx, st, 1, sh);
+    ctx.globalAlpha = 1; ctx.fillStyle = AMBER; ctx.fillRect(sx, sy, 1, st + sh - sy); ctx.strokeStyle = AMBER; ctx.lineWidth = 1; ctx.strokeRect(sx - 3.5, sy - 3.5, 7, 7);
+    ctx.fillStyle = C; ctx.globalAlpha = 0.9; ctx.fillText(Math.round(pos * 100) + "%", sx - 2, H - PB + 4 > H - 12 ? PT + ph + 2 : H - PB + 4);
+    // frame stack
+    const M = 18, N = Math.max(40, Math.min(96, Math.round(pw / 4.5)));
+    const Wf = pw * 0.84, depthH = ph * 0.56, dxBack = pw * 0.16, A = ph * 0.34, x0 = PL, y0 = PT + ph * 0.95;
     if (lv) {
       if (!this.wfRows || now - (this.wfLast || 0) > 70) {
         this.wfLast = now;
@@ -1128,15 +1155,13 @@ class Component extends DCLogic {
         this.wfRows = [row, ...(this.wfRows || []).slice(0, M - 1)];
       }
     } else this.wfRows = null;
-    ctx.fillStyle = "#7FE9F0";
+    const hj = Math.round(pos * (M - 1)), edgeL = [], edgeR = [];
+    ctx.fillStyle = C;
     for (let j = M - 1; j >= 0; j--) {
-      const d = j / (M - 1), sc = 1 - 0.35 * d, ox = x0 + d * dxBack + (Wf * (1 - sc)) / 2, oy = y0 - d * depthH;
+      const d = j / (M - 1), sc = 1 - 0.3 * d, ox = x0 + d * dxBack + (Wf * (1 - sc)) / 2, oy = y0 - d * depthH;
       const m = 0.5 + 0.5 * Math.sin(d * 3.1 + t * 0.7), c1 = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.9 + d * 5));
       const pulse = this.reduce ? 1 : 0.75 + 0.25 * Math.sin(t * 1.6 - d * 4);
-      const spec = this.wfRows && this.wfRows[j];
-      ctx.globalAlpha = 0.28 + 0.72 * (1 - d * 0.8);
-      const r = 1.5 * (1 - d * 0.3);
-      ctx.beginPath();
+      const spec = this.wfRows && this.wfRows[j], pts = [];
       for (let i = 0; i < N; i++) {
         const u = i / (N - 1), env = Math.pow(Math.sin(Math.PI * u), 0.5);
         let w;
@@ -1144,15 +1169,24 @@ class Component extends DCLogic {
         else {
           const x2 = u * 2 + t * 0.15; let saw = 0;
           for (let h = 1; h <= 6; h++) saw += Math.sin(TAU * h * x2 + d * h * 1.7) / h;
-          w = (Math.sin(TAU * x2) * (1 - m) * 0.8 + saw * 0.8 * m) * 0.5 + 0.5 + Math.exp(-((u - c1) * (u - c1)) / 0.004) * 0.7 + Math.sin(u * 90 + t * 38 + d * 7) * 0.03;
-          w *= pulse;
+          w = ((Math.sin(TAU * x2) * (1 - m) * 0.8 + saw * 0.8 * m) * 0.5 + 0.5 + Math.exp(-((u - c1) * (u - c1)) / 0.004) * 0.7 + Math.sin(u * 90 + t * 38 + d * 7) * 0.03) * pulse;
         }
-        const px = ox + u * Wf * sc, py = oy - Math.max(0, w) * env * A * sc;
-        ctx.rect(px - r / 2, py - r / 2, r, r);
+        pts.push(ox + u * Wf * sc, oy - Math.max(0, w) * env * A * sc);
       }
-      ctx.fill();
+      edgeL.push(pts[0], pts[1]); edgeR.push(pts[pts.length - 2], pts[pts.length - 1]);
+      if (j === hj) {
+        ctx.save(); ctx.strokeStyle = AMBER; ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.shadowColor = AMBER; ctx.shadowBlur = 5; ctx.globalAlpha = 1;
+        ctx.beginPath(); for (let k = 0; k < pts.length; k += 2) k ? ctx.lineTo(pts[k], pts[k + 1]) : ctx.moveTo(pts[k], pts[k + 1]); ctx.stroke(); ctx.restore();
+        continue;
+      }
+      ctx.globalAlpha = (0.22 + 0.6 * (1 - d * 0.8)) * (Math.abs(j - hj) < 3 ? 1 : 0.8);
+      const r = 1.4 * (1 - d * 0.3);
+      ctx.beginPath(); for (let k = 0; k < pts.length; k += 2) ctx.rect(pts[k] - r / 2, pts[k + 1] - r / 2, r, r); ctx.fill();
     }
-    ctx.globalAlpha = 1;
+    // outline edges tying the stack into one block
+    ctx.strokeStyle = C; ctx.lineWidth = 1; ctx.globalAlpha = 0.25;
+    [edgeL, edgeR].forEach(e => { ctx.beginPath(); for (let k = 0; k < e.length; k += 2) k ? ctx.lineTo(e[k], e[k + 1]) : ctx.moveTo(e[k], e[k + 1]); ctx.stroke(); });
+    ctx.globalAlpha = 1; ctx.textAlign = "left";
   }
 
   tickGauges() {
