@@ -48,7 +48,7 @@ There are two parts:
 ## Page sections (template, in order)
 - **Boot / preloader** (top of the template): the bouncing ASCII hand (DVD-screensaver drift), the 000→174 counter, a boot log and a loading bar. The boot log (`logLine` / `logStage` / `renderBootLog`) types each status in as a new `>` command line; finished lines get "... OK" and older lines scroll up: "Boot surround.exe", "Calibrating low-end", "Loading doubles", "Reloading gunfingers", "Preparing frog lasers", "Sub bass detected", "Loading complete", "Run surround.exe". The loading bar is a dotted digital oscilloscope canvas (`drawWaveBar`): loaded samples trace a live pulsing waveform with two faint echoes, unloaded samples a dim flat line. The loader lasts about 8s on desktop and 5.8s on phones (counter speed in `drawBoot`).
 - **Hero** (`data-screen-label="Hero"`, ~line 55): the header row, the H1 `SURROUND` (scrambles on hover), the highlighted subhead "The filthiest Drum & Bass party Sydney has ever seen. One night only.", the terminal signup, and the ASCII hand canvas.
-- **Events / INFO** (`data-screen-label="Events"`, ~line 142): the centred highlighted `EVENT INFO` header, then the `EVENT_001.EXE` window with the #001 details, "STATUS: WAITLIST ONLINE" with a green blinker, DATE/LOCATION/LINEUP set to [REDACTED], the `> RESERVE YOUR SPOT` button, the globe, and the foldable data panels (graph and data console).
+- **Events / INFO** (`data-screen-label="Events"`, ~line 142): the centred highlighted `EVENT INFO` header, then the `EVENT_001.EXE` window with the #001 details, "STATUS: WAITLIST ONLINE" with a green blinker, DATE/LOCATION/LINEUP set to [REDACTED], the `> RESERVE YOUR SPOT` button, the globe, and the data panels (Wave Data and Data Console), always open on every screen size.
 - **About** (`data-screen-label="About"`, ~line 221): two `>` lines with a blinking block cursor.
 - **Footer** (`data-screen-label="Footer"`, ~line 230): a `CONTACT` tag and the links `> INSTAGRAM`, `> TIKTOK`, `> SOUNDCLOUD`, `> EMAIL`, plus the © line.
 
@@ -61,7 +61,7 @@ There are two parts:
 - `redactGlitch()`: an occasional scramble on [REDACTED] tags, drawn as an overlay so the layout never moves.
 - `buildLens` / `syncLens`: the lens warp SVG filter.
 - `submit` / `finishSignup()`: the signup flow, one question at a time: email → full name → mobile (optional, `[TAB] SKIP`; validated and normalised by `normPhone` to `+614…` or international `+…`) → consent checkbox (required; "GET NOTIFIED WHEN TICKETS GO ON SALE", from `consentText()`) → JOIN. `saveSignup(row)` inserts into the Supabase table `public.waitlist` (`SUPABASE_URL` / `SUPABASE_KEY` near the top of the script; the publishable key is public by design, and row-level security only allows inserts). The JOIN button shows TRANSMITTING... while saving; on failure the visitor sees ERROR 0x50 and stays on the consent step; a duplicate email (409) counts as success. After saving, `signupCount()` calls the `waitlist_count()` RPC, and the queue position is `queueBase - 1 + total sign-ups`. The visitor is also remembered in localStorage.
-- `frame(now)`: the main animation loop, paused when the tab is hidden. Globe and graph redraw at ~30fps (20fps on phones); the hand redraws at 20fps (`HAND_MS`).
+- `frame(now)`: the main animation loop, paused when the tab is hidden. Globe and graph redraw at ~30fps on every screen size; the hand redraws at 20fps (`HAND_MS`).
 
 ## Performance (keep these, they took profiling to find)
 - Canvas resolution is capped: `HAND_DPR` 1.5 (hand and loader), `SCOPE_DPR` 1.25 (globe and graph). Full Retina resolution quadruples the pixels redrawn every frame.
@@ -69,6 +69,7 @@ There are two parts:
 - `lensWarp` stays off: its SVG displacement filter re-filters whole sections every frame.
 - `drawHero` skips its redraw when the hand itself is off screen (not just the hero section), which matters on phones where the globe sits just below the hero.
 - Phones redraw the globe and wave panel at 30fps like desktop; the hand stays at 20fps (`HAND_MS`).
+- Phones: the globe's canvas has `shadowBlur` disabled (`gLite`; it was ~3x the globe's cost). The glow is faked with a wide faint under-stroke on the rim and the Australia outline plus one soft radial haze behind the globe that fades as it zooms in.
 - While the page is scrolling (`lastScrollAt`, 150ms window), `frame()` halves the canvas redraw rate so the scroll stays smooth.
 - Measured in Chromium at 1440×900 @2x: ~58fps on the hero, 60fps on the events section and on phones.
 

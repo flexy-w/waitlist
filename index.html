@@ -956,6 +956,10 @@ class Component extends DCLogic {
       const dpr = Math.min(SCOPE_DPR, window.devicePixelRatio || 1);
       cv.width = W * dpr; cv.height = H * dpr;
       this.gctx = cv.getContext("2d"); this.gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Phones: canvas shadowBlur is the globe's main cost (about 3x slower), so it is switched off there and the
+      // glow is faked with a wider, fainter under-stroke on the rim and the Australia outline (the grid already has its own wide glow pass).
+      this.gLite = !!this.state.mobile;
+      if (this.gLite) Object.defineProperty(this.gctx, "shadowBlur", { get() { return 0; }, set() {}, configurable: true });
     }
     const ctx = this.gctx, D = Math.PI / 180, TAU = Math.PI * 2, C = "#7FE9F0";
     const ease = u => u < 0 ? 0 : u > 1 ? 1 : u * u * (3 - 2 * u);
@@ -979,16 +983,26 @@ class Component extends DCLogic {
     ctx.stroke(); ctx.globalAlpha = 0.06; ctx.beginPath();
     for (let i = 1; i < 50; i++) { const tx = Math.round(W * i / 50) + 0.5, ty = Math.round(H * i / 50) + 0.5, s = i % 5 ? 2 : 4; ctx.moveTo(tx, H / 2 - s); ctx.lineTo(tx, H / 2 + s); ctx.moveTo(W / 2 - s, ty); ctx.lineTo(W / 2 + s, ty); }
     ctx.stroke(); ctx.restore();
-    const stroke = (list, w, a, blur) => {
-      ctx.lineWidth = w; ctx.globalAlpha = a; ctx.strokeStyle = C; ctx.shadowColor = C; ctx.shadowBlur = blur;
-      ctx.beginPath(); for (const p of list) { ctx.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]); } ctx.stroke();
+    const lite = this.gLite;
+    const stroke = (list, w, a, blur, fakeGlow) => {
+      ctx.strokeStyle = C; ctx.shadowColor = C; ctx.shadowBlur = blur;
+      ctx.beginPath(); for (const p of list) { ctx.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]); }
+      if (lite && fakeGlow) { ctx.lineWidth = w + blur * 0.9; ctx.globalAlpha = a * 0.2; ctx.stroke(); }
+      ctx.lineWidth = w; ctx.globalAlpha = a; ctx.stroke();
     };
     const split = pts => { const out = []; let cur = []; for (const p of pts) { if (p[2] > 0) cur.push(p); else if (cur.length) { out.push(cur); cur = []; } } if (cur.length > 1) out.push(cur); return out; };
     const paths = [];
     for (let la = -75; la <= 75; la += 15) { const pts = []; for (let lo = 0; lo <= 360; lo += 4) pts.push(proj(la * D, lo * D)); paths.push(...split(pts)); }
     for (let lo = 0; lo < 360; lo += 15) { const pts = []; for (let la = -90; la <= 90; la += 4) pts.push(proj(la * D, lo * D)); paths.push(...split(pts)); }
     { const gk = this.props.glow ?? 0.7; stroke(paths, 3.4, 0.28 * gk, 18 * gk); stroke(paths, 1, 0.8, 7 * gk); }
-    ctx.globalAlpha = 1; ctx.lineWidth = 1.4; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+    if (lite) { // one soft radial haze stands in for the bloom that per-line blur gives on desktop
+      const hz = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 1.12);
+      hz.addColorStop(0, "rgba(127,233,240,.10)"); hz.addColorStop(0.8, "rgba(127,233,240,.07)"); hz.addColorStop(1, "rgba(127,233,240,0)");
+      ctx.globalAlpha = Math.min(1, (Math.min(W, H) * 0.45) / R); ctx.fillStyle = hz; ctx.beginPath(); ctx.arc(cx, cy, R * 1.12, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.lineWidth = 1.4; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU);
+    if (lite) { ctx.lineWidth = 7; ctx.globalAlpha = 0.14; ctx.stroke(); ctx.lineWidth = 3.5; ctx.globalAlpha = 0.25; ctx.stroke(); ctx.lineWidth = 1.4; ctx.globalAlpha = 1; }
+    ctx.stroke();
     const land = (ring, fillA, lineA) => {
       const pts = ring.map(([lo, la]) => proj(la * D, lo * D));
       if (!pts.some(p => p[2] > 0)) return;
@@ -996,7 +1010,7 @@ class Component extends DCLogic {
       stroke(split([...pts, pts[0]]), 1, lineA, 4);
     };
     if (this.world) for (const ring of this.world) land(ring, 0.1, 0.6);
-    for (const P of [AUS, TAS]) { land(P, 0.26, 1); const pts = P.map(([lo, la]) => proj(la * D, lo * D)); if (pts.every(p => p[2] > 0)) stroke([[...pts, pts[0]]], 3, 0.3, 14); }
+    for (const P of [AUS, TAS]) { land(P, 0.26, 1); const pts = P.map(([lo, la]) => proj(la * D, lo * D)); if (pts.every(p => p[2] > 0)) stroke([[...pts, pts[0]]], 3, 0.3, 14, true); }
     ctx.globalAlpha = 1; ctx.shadowBlur = 0;
     const sp = proj(-33.87 * D, SYD);
     if (tg > 0 && sp[2] > 0.1) {
@@ -1606,7 +1620,7 @@ class Component extends DCLogic {
       bootPct: this.bootPct, bootBar: this.bootBar, bootMsg: this.bootMsg, bootCorners: this.bootCorners,
       clock: this.clock, queue: this.queue, cdD: this.cdD, cdH: this.cdH, cdM: this.cdM, cdS: this.cdS,
       cursor: this.cursor, cursorBox: this.cursorBox, cursorLbl: this.cursorLbl, emailRef: this.emailRef, customCursor: this.props.customCursor ?? true, hudHex: this.hudHex, hudUp: this.hudUp, hudSig: this.hudSig, hudNode: this.hudNode, hudDb: this.hudDb, hudLat: this.hudLat, hudPkt: this.hudPkt, hudEq: this.hudEq, hudCoord: this.hudCoord, cdLine: this.cdLine, globeWrap: this.globeWrap, globeCanvas: this.globeCanvas, globeStatus: this.globeStatus, globeZoom: this.globeZoom, heroText: this.heroText, handSlot: this.handSlot, waveCanvas: this.waveCanvas, artWrap: this.artWrap, artCanvas: this.artCanvas, artLabel: this.artLabel, isMobileView: !!this.state.mobile, globeOrder: this.state.mobile ? "-1" : "0", evGap: this.state.mobile ? "16px" : "clamp(24px,3vw,40px)", rowPad: this.state.mobile ? "6px 0" : "14px 0", numSize: this.state.mobile ? "44px" : "63px", resAlign: this.state.mobile ? "stretch" : "flex-start",
-      dataToggle: !!this.state.mobile, showData: !this.state.mobile || !!this.state.dataOpen, dataOpen: !!this.state.dataOpen, dataSign: this.state.dataOpen ? "[−]" : "[+]", toggleData: () => this.setState(s => ({ dataOpen: !s.dataOpen })), heroMinH: this.state.mobile ? "calc(100svh - 110px)" : "100svh", evPadTop: this.state.mobile ? "20px" : "clamp(48px,8vw,120px)", started: true, notStarted: false, startSignup: this.startSignup, queueCount: (this.state.qn ?? this.queueN).toLocaleString("en-US"), heroPadB: (this.state.hud !== false) ? "110px" : "clamp(28px,5vw,56px)", pong: !!this.state.pong, openPong: this.openPong, closePong: this.closePong, pongCanvas: this.pongCanvas, pongWrap: this.pongWrap, pongP: this.pongP, pongC: this.pongC, graphCanvas: this.graphCanvas, cX: this.cX, cY: this.cY, cZ: this.cZ, gaugeL: this.gaugeL, gaugeR: this.gaugeR,
+      dataToggle: false, showData: true, dataOpen: !!this.state.dataOpen, dataSign: this.state.dataOpen ? "[−]" : "[+]", toggleData: () => this.setState(s => ({ dataOpen: !s.dataOpen })), heroMinH: this.state.mobile ? "calc(100svh - 110px)" : "100svh", evPadTop: this.state.mobile ? "20px" : "clamp(48px,8vw,120px)", started: true, notStarted: false, startSignup: this.startSignup, queueCount: (this.state.qn ?? this.queueN).toLocaleString("en-US"), heroPadB: (this.state.hud !== false) ? "110px" : "clamp(28px,5vw,56px)", pong: !!this.state.pong, openPong: this.openPong, closePong: this.closePong, pongCanvas: this.pongCanvas, pongWrap: this.pongWrap, pongP: this.pongP, pongC: this.pongC, graphCanvas: this.graphCanvas, cX: this.cX, cY: this.cY, cZ: this.cZ, gaugeL: this.gaugeL, gaugeR: this.gaugeR,
       hudFrame: !this.state.mobile, stats: [["CAPACITY", full ? 100 : 88, full ? "#FFB347" : "#7FE9F0"], ["SUB-BASS", 97, "#7FE9F0"], ["DOUBLES LOADED", 92, "#7FE9F0"], ["GUNFINGERS READY", 100, "#FFB347"], ["FROG LASERS", 64, "#7FE9F0"]].map(([label, pct, col]) => ({ label, pct, w: pct + "%", col })), lensImg: this.lensImg, lensDisp: this.lensDisp, lensImgX: this.lensImgX, lensDispX: this.lensDispX, lensFilter: this.lensOn() ? "url(#hs-lens)" : "none", lensFilterX: this.lensOn() ? "url(#hs-lens-x)" : "none", waveBottom: (this.state.hud !== false) ? "100px" : "64px", onEmailFocus: e => { if (!this.state.mobile) return; const el = e.currentTarget; setTimeout(() => { const vv = window.visualViewport, vh = vv ? vv.height : window.innerHeight, r = el.getBoundingClientRect(); if (r.bottom > vh * 0.6 || r.top < 60) window.scrollTo({ top: window.scrollY + r.top - vh * 0.35, behavior: "smooth" }); }, 350); }, radioEq: this.radioEq, toggleRadio: this.toggleRadio,
       arrowBottom: (this.state.hud !== false) ? "48px" : "calc(12px + env(safe-area-inset-bottom, 0px))", globeMax: this.state.mobile ? "210px" : "356px", arrowLeft: this.state.mobile ? "8px" : "50%", arrowTf: this.state.mobile ? "none" : "translateX(-50%)", radioOn: !!this.state.radioOn, radioOff: !this.state.radioOn, radioMobile: !(this.state.hud !== false) && !this.state.booting, radioLabel: this.state.radioOn ? "ON" : "OFF",
       radioBg: this.state.radioOn ? "#7FE9F0" : "transparent", radioFg: this.state.radioOn ? "var(--bsod,#040805)" : "#7FE9F0",
