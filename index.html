@@ -122,7 +122,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
             <span aria-hidden="true" style="flex:0 0 auto;padding:0 .2em;background:{{ boxBg }};color:{{ boxFg }};text-shadow:none">{{ boxMark }}</span>
             <span>{{ consentText }}</span>
           </label>
-          <button type="submit" style="margin-top:6px;background:#7FE9F0;color:var(--bsod,#040805);border:0;font-family:inherit;font-size:inherit;letter-spacing:.06em;padding:0 16px;min-height:44px;text-shadow:none;cursor:pointer;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))" style-hover="background:#F2FFFF;box-shadow:0 0 18px rgba(127,233,240,calc(.9 * var(--g,1))),0 0 4px rgba(242,255,255,.9)">&gt; JOIN WAITLIST</button>
+          <button type="submit" style="margin-top:6px;background:#7FE9F0;color:var(--bsod,#040805);border:0;font-family:inherit;font-size:inherit;letter-spacing:.06em;padding:0 16px;min-height:44px;text-shadow:none;cursor:pointer;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))" style-hover="background:#F2FFFF;box-shadow:0 0 18px rgba(127,233,240,calc(.9 * var(--g,1))),0 0 4px rgba(242,255,255,.9)">{{ joinLabel }}</button>
           </sc-if>
         </form>
         <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ skipPhone }}" style="align-self:flex-start;background:transparent;color:#7FE9F0;border:0;padding:4px 0;font-family:inherit;font-size:11px;letter-spacing:.08em;opacity:.8;cursor:pointer" style-hover="opacity:1">[TAB] SKIP — OPTIONAL</button></sc-if>
@@ -325,7 +325,20 @@ const HAND_DPR = 1.5, SCOPE_DPR = 1.25;
 const HAND_MS = 50;
 // Australian mobile (04xx / +614xx) normalised to +614xxxxxxxx, or any international number in +E.164 form.
 const normPhone = v => { const d = String(v || "").replace(/[\s\-().]/g, ""); const m = d.match(/^(?:\+?61|0)(4\d{8})$/); if (m) return "+61" + m[1]; return /^\+[1-9]\d{7,14}$/.test(d) ? d : null; };
-const WAITLIST_URL = "https://script.google.com/macros/s/AKfycbxcCwasuYrTX4i42LMVcvNFsjOYkv7x0x2SY8ODBw07EBY4w2QwmyhASXyhK113rHpvuQ/exec";
+// Sign-ups are stored in Supabase (table public.waitlist). The publishable key is meant to be public: row-level
+// security only lets visitors insert, and waitlist_count() only returns the total.
+const SUPABASE_URL = "https://uxidyuwketdpfxbpolka.supabase.co", SUPABASE_KEY = "sb_publishable_EzvyDOMU6zqU1-m-V6eKqg_V6WdEbFP";
+const sbFetch = (path, body, extra) => fetch(SUPABASE_URL + path, { method: "POST", headers: Object.assign({ apikey: SUPABASE_KEY, "Content-Type": "application/json" }, extra), body: JSON.stringify(body) });
+// Resolves "ok" (saved) or "dup" (email already on the list); rejects on any other failure.
+async function saveSignup(row) {
+  const r = await sbFetch("/rest/v1/waitlist", row, { Prefer: "return=minimal" });
+  if (r.ok) return "ok";
+  if (r.status === 409) return "dup";
+  throw new Error("waitlist insert " + r.status + " " + (await r.text().catch(() => "")));
+}
+async function signupCount() {
+  try { const r = await sbFetch("/rest/v1/rpc/waitlist_count", {}); if (!r.ok) return null; const n = +(await r.json()); return Number.isFinite(n) ? n : null; } catch (e) { return null; }
+}
 const TARGET = new Date(2026, 10, 19, 22, 0, 0);
 const rnd = s => s[(Math.random() * s.length) | 0];
 
@@ -1515,13 +1528,22 @@ class Component extends DCLogic {
     this.setState({ step: "name", error: "", history: ["> RESERVE YOUR SPOT: " + email.toUpperCase(), "> EMAIL LOCKED ✓"] }, () => this.refocus());
   };
 
-  finishSignup() {
-    const email = (this.state.email || "").trim(), name = (this.state.name || "").trim(), phone = this.state.phone || "";
-    const consent = { email: true, sms: !!phone };
-    const pos = this.queueN + 1; this.queueN = pos; this.setState({ qn: pos });
+  async finishSignup() {
+    if (this.state.sending) return;
+    const email = (this.state.email || "").trim().toLowerCase(), name = (this.state.name || "").trim(), phone = this.state.phone || "";
+    this.setState({ sending: true, error: "" });
+    try {
+      await saveSignup({ email, name: name || null, phone: phone || null, consent_email: true, consent_sms: !!phone, consent_text: this.consentText(), list: "main" });
+    } catch (err) {
+      console.error(err);
+      this.setState({ sending: false, error: "ERROR 0x50: SIGNAL LOST. YOU'RE NOT ON THE LIST YET. TRY AGAIN." });
+      return;
+    }
+    const n = await signupCount();
+    const pos = n != null ? (this.props.queueBase ?? 78) - 1 + n : this.queueN + 1;
+    this.queueN = pos;
     try { localStorage.setItem(STORE, JSON.stringify({ email, name, phone, pos })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
-    this.sendSignup({ email, name, phone, consent_email: consent.email, consent_sms: consent.sms, consent_text: this.consentText(), list: "main" });
-    this.setState({ joined: true, overflow: false, pos, error: "", logShown: 0, step: "email", history: [] });
+    this.setState({ sending: false, qn: pos, joined: true, overflow: false, pos, error: "", logShown: 0, step: "email", history: [] });
     clearInterval(this.logTimer);
     this.logTimer = setInterval(() => {
       this.setState(s => ({ logShown: s.logShown + 1 }), () => { if (this.state.logShown >= 2) clearInterval(this.logTimer); });
@@ -1532,13 +1554,14 @@ class Component extends DCLogic {
     return "GET NOTIFIED WHEN TICKETS GO ON SALE";
   }
 
-  sendSignup(data) {
-    try { fetch(WAITLIST_URL, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(data) }).catch(() => {}); } catch (err) {}
-  }
-
-  joinOverflow(email) {
+  async joinOverflow(email) {
+    if (this.state.sending) return;
+    email = email.toLowerCase();
+    this.setState({ sending: true, error: "" });
+    try { await saveSignup({ email, consent_email: true, consent_sms: false, consent_text: "WAITLIST FULL: WE'LL EMAIL YOU AS SOON AS MORE SLOTS OPEN", list: "overflow" }); }
+    catch (err) { console.error(err); this.setState({ sending: false, error: "ERROR 0x50: SIGNAL LOST. YOU'RE NOT ON THE LIST YET. TRY AGAIN." }); return; }
     try { localStorage.setItem(STORE, JSON.stringify({ email, overflow: true })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
-    this.sendSignup({ email, name: "", phone: "", consent_email: true, consent_sms: false, list: "overflow" });
+    this.setState({ sending: false });
     clearInterval(this.logTimer);
     this.lastFocus = document.activeElement;
     this.setState({ joined: true, overflow: true, fullOpen: true, pos: 0, error: "", logShown: 2, step: "email", history: [] }, () => setTimeout(() => { const b = this.fullOk.current; if (b) b.focus({ preventScroll: true }); }, 30));
@@ -1600,7 +1623,7 @@ class Component extends DCLogic {
           onField: e => this.setState({ [key]: e.target.value, error: "" }),
           onFieldKey: e => { if (st === "phone" && e.key === "Tab" && !e.shiftKey) { e.preventDefault(); this.skipPhone(); } },
           isPhone: st === "phone", isConsent: st === "consent", notConsent: st !== "consent", history: this.state.history || [],
-          consentRef: this.consentRef, consent: on, consentText: this.consentText(),
+          joinLabel: this.state.sending ? "> TRANSMITTING..." : "> JOIN WAITLIST", consentRef: this.consentRef, consent: on, consentText: this.consentText(),
           boxMark: on ? "[X]" : "[ ]", boxBg: on ? "#7FE9F0" : "transparent", boxFg: on ? "var(--bsod,#040805)" : "#7FE9F0",
           onConsent: e => this.setState({ consent: e.target.checked, error: "" }),
           onConsentKey: e => { if (e.key === "Enter") { e.preventDefault(); this.submit({ preventDefault() {} }); } },
