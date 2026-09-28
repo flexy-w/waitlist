@@ -218,12 +218,14 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
           <span>Y &lt;&lt;&lt; <span ref="{{ cY }}">151.2***</span> &gt;&gt;&gt;</span>
           <span style="; max-width: 100%">Z &lt;&lt;&lt; <span ref="{{ cZ }}">-012.000</span> &gt;&gt;&gt;</span>
           <span style="align-self:flex-start;font-size:12px;letter-spacing:.08em;margin-top:16px;background:#7FE9F0;color:var(--bsod,#040805);padding:2px 7px;text-shadow:none;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))">SYSTEM PROPERTIES</span>
+          <div style="display:grid;grid-template-columns:max-content max-content minmax(40px,1fr);gap:5px 14px;align-items:center;font-size:11px;white-space:nowrap">
           <sc-for list="{{ stats }}" as="s" hint-placeholder-count="5">
-            <div style="display:grid;grid-template-columns:minmax(0,18ch) 6ch minmax(0,1fr);gap:8px;align-items:center;font-size:11px;white-space:nowrap">
-              <span>{{ s.label }}</span><span>[{{ s.pct }}%]</span>
+            <div style="display:contents">
+              <span>{{ s.label }}</span><span style="text-align:right">[{{ s.pct }}%]</span>
               <span style="height:8px;border:1px solid rgba(127,233,240,.6);position:relative;overflow:hidden;box-shadow:0 0 10px rgba(127,233,240,calc(.35 * var(--g,1))),inset 0 0 10px rgba(127,233,240,calc(.12 * var(--g,1)))"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ s.w }};background:repeating-linear-gradient(90deg,{{ s.col }} 0 3px,transparent 3px 5px)"></span></span>
             </div>
           </sc-for>
+          </div>
         </div>
       </div>
     </div>
