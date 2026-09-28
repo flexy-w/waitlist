@@ -40,7 +40,7 @@ There are two parts:
 | `preloader` / `introEveryLoad` | true / false | Loading screen; once per session unless introEveryLoad |
 | `customCursor` | true | Blinking block mouse cursor with X/Y readout (desktop mice only) |
 | `radioStreamUrl` | "" | Real stream URL for the radio toggle. Empty means the built-in 174 BPM synth. |
-| `queueBase` | 200 | Starting waitlist queue number |
+| `queueBase` | 78 | Queue position shown to the first sign-up (#78), counting up from there. Until sign-ups are stored in a database this count is per browser, so every new visitor sees #78. |
 | `waitlistFull` | false | FOMO mode: sign-ups get a "WAITLIST FULL" pop-up and go on the overflow list (sent with `list: "overflow"`); status shows WAITLIST FULL |
 | `screenBlue` | #040805 | Background colour |
 
