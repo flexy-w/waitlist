@@ -44,7 +44,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     <div style="position:absolute;left:clamp(16px,3vw,40px);right:clamp(16px,3vw,40px);bottom:clamp(20px,4vw,40px);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 24px">
       <div style="display:flex;flex-direction:column;gap:10px">
         <span ref="{{ bootMsg }}" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase">Locating subject</span>
-        <span ref="{{ bootBar }}" style="font-size:14px;letter-spacing:.05em">░░░░░░░░░░░░░░░░░░░░</span>
+        <span ref="{{ bootBar }}" style="font-size:20px;letter-spacing:.05em">░░░░░░░░░░░░░░░░░░░░</span>
       </div>
       <span ref="{{ bootPct }}" style="font-size:clamp(56px,10vw,140px);font-weight:400;letter-spacing:0;line-height:.8;font-variant-numeric:tabular-nums">000</span>
     </div>
@@ -52,7 +52,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     <sc-if value="{{ isMobileView }}" hint-placeholder-val="{{ false }}">
     <div style="position:absolute;left:clamp(16px,3vw,40px);right:clamp(16px,3vw,40px);bottom:clamp(28px,6vh,64px);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
       <span ref="{{ bootPct }}" style="font-size:clamp(48px,8vw,110px);font-weight:400;letter-spacing:0;line-height:.8;font-variant-numeric:tabular-nums">000</span>
-      <span ref="{{ bootBar }}" style="font-size:14px;letter-spacing:.05em">░░░░░░░░░░░░░░░░░░░░</span>
+      <span ref="{{ bootBar }}" style="font-size:17px;letter-spacing:.05em">░░░░░░░░░░░░░░░░░░░░</span>
       <span ref="{{ bootMsg }}" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase">Locating subject</span>
     </div>
     </sc-if>
@@ -1147,7 +1147,7 @@ class Component extends DCLogic {
     if (!this.bPlaced) {
       this.bPlaced = true;
       this.bx = Math.random() * (W - x1) ; this.by = Math.random() * Math.max(1, H - y1);
-      const sp = Math.max(170, Math.min(W, H) * 0.3);
+      const sp = 0.95 * Math.max(170, Math.min(W, H) * 0.3);
       this.bvx = sp * (Math.random() < 0.5 ? -1 : 1); this.bvy = sp * 0.8 * (Math.random() < 0.5 ? -1 : 1);
     }
     const dt = this.bLast ? Math.min(0.05, (now - this.bLast) / 1000) : 0; this.bLast = now;
@@ -1178,7 +1178,7 @@ class Component extends DCLogic {
 
     if (this.bp < 174) {
       const stall = Math.sin(now / 370) > 0.8;
-      this.bp = Math.min(174, this.bp + dt * (174 / (window.innerWidth < 640 ? 3 : 5)) * (stall ? 0.05 : 0.5 + Math.random() * 1.2));
+      this.bp = Math.min(174, this.bp + dt * (174 / (window.innerWidth < 640 ? 4.8 : 6.8)) * (stall ? 0.05 : 0.5 + Math.random() * 1.2));
       const msgs = ["Calibrating low-end", "Loading doubles", "Reloading gunfingers", "Preparing frog lasers", "Sub bass detected"];
       if (this.bootMsg.current) this.bootMsg.current.textContent = msgs[Math.min(4, Math.floor(this.bp / 34.8))];
       if (this.bp >= 174) { this.bDone = now; if (this.bootMsg.current) this.bootMsg.current.textContent = "Loading complete"; }
@@ -1198,12 +1198,14 @@ class Component extends DCLogic {
     const mobile = W < 640, N = mobile ? 64 : 72, M = mobile ? 14 : 16;
     const tt = this.reduce ? t * 0.08 : t;
     const power = 0.35 + 0.65 * Math.min(1, (this.bp || 0) / 174);
-    // Small, and parked just above the loading readout: above the message + bar on desktop, above the counter on phones.
-    const Wf = mobile ? Math.min(W * 0.5, 190) : 260, depthH = Wf * 0.3, dxBack = Wf * 0.2;
+    // Parked just above the loading readout and exactly as wide as the loading bar (measured, so it matches whatever font loads):
+    // above the message + bar on desktop, above the counter on phones.
+    const bar = this.bootBar.current, br = bar ? bar.getBoundingClientRect() : null;
+    const Wf = br && br.width ? br.width : (mobile ? 190 : 260), depthH = Wf * 0.3, dxBack = Wf * 0.2;
     const A = Wf * 0.14 * power;
     const anchorEl = mobile ? this.bootPct.current : this.bootMsg.current, ar = anchorEl ? anchorEl.getBoundingClientRect() : null;
     const frontY = (ar ? ar.top : H * 0.7) - 22 - A * 0.5;
-    const cx = mobile ? (ar ? ar.left + ar.width / 2 : W / 2) - dxBack / 2 : (ar ? ar.left : 40) + Wf / 2, cy = frontY - depthH / 2;
+    const cx = (br ? br.left : (W - Wf) / 2) + Wf / 2, cy = frontY - depthH / 2;
     const TAU = Math.PI * 2, r = 1.4, ph = WT_PH;
     ctx.save(); ctx.fillStyle = "#7FE9F0";
     for (let j = M - 1; j >= 0; j--) {
@@ -1211,7 +1213,8 @@ class Component extends DCLogic {
       const m = 0.5 + 0.5 * Math.sin(d * 3.1 + tt * 0.7);
       const c1 = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(tt * 0.9 + d * 5)), c2 = 0.65 + 0.25 * Math.sin(tt * 0.6 - d * 4);
       const ox = cx + d * dxBack, oy = cy + (0.5 - d) * depthH;
-      ctx.globalAlpha = 0.3 + 0.7 * (1 - d * 0.75);
+      const pulse = this.reduce ? 1 : 0.72 + 0.28 * fsin(tt * 0.9 - d * 0.7);
+      ctx.globalAlpha = (0.3 + 0.7 * (1 - d * 0.75)) * (0.75 + 0.25 * pulse);
       const rr = r * sc;
       for (let h = 1; h <= 8; h++) ph[h] = (d * h * 1.7 + (h > 4 ? tt * h * 0.4 : 0)) / TAU;
       ctx.beginPath();
@@ -1224,7 +1227,7 @@ class Component extends DCLogic {
         if (e2 < 0.02) w += Math.exp(-e2 / 0.002) * 0.6 * m;
         w += fsin((u * 90 + tt * 38 + d * 7) / TAU) * 0.04;
         const env = ENV[Math.round(u * 255)];
-        const px = ox + (u - 0.5) * Wf * sc, py = oy - w * env * A * sc;
+        const px = ox + (u - 0.5) * Wf * sc, py = oy - w * env * A * sc * pulse;
         ctx.rect(px - rr / 2, py - rr / 2, rr, rr);
       }
       ctx.fill();
