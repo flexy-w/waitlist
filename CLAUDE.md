@@ -67,6 +67,8 @@ There are two parts:
 - Canvas resolution is capped: `HAND_DPR` 1.5 (hand and loader), `SCOPE_DPR` 1.25 (globe and graph). Full Retina resolution quadruples the pixels redrawn every frame.
 - Glyph glow sprites are cropped at `GLOW_PAD` (0.75× the blur radius). The invisible tail beyond that was most of the blending cost.
 - `lensWarp` stays off: its SVG displacement filter re-filters whole sections every frame.
+- `drawHero` skips its redraw when the hand itself is off screen (not just the hero section), which matters on phones where the globe sits just below the hero.
+- Phones redraw the globe and wave panel at 30fps like desktop; the hand stays at 20fps (`HAND_MS`).
 - While the page is scrolling (`lastScrollAt`, 150ms window), `frame()` halves the canvas redraw rate so the scroll stays smooth.
 - Measured in Chromium at 1440×900 @2x: ~58fps on the hero, 60fps on the events section and on phones.
 

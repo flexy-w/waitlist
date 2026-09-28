@@ -49,10 +49,12 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     </div>
     </sc-if>
     <sc-if value="{{ isMobileView }}" hint-placeholder-val="{{ false }}">
-    <div style="position:absolute;left:clamp(16px,3vw,40px);right:clamp(16px,3vw,40px);bottom:clamp(28px,6vh,64px);display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
-      <span ref="{{ bootPct }}" style="font-size:clamp(48px,8vw,110px);font-weight:400;letter-spacing:0;line-height:.8;font-variant-numeric:tabular-nums">000</span>
-      <canvas ref="{{ bootBar }}" aria-hidden="true" style="display:block;width:240px;max-width:100%;height:48px"></canvas>
-      <div ref="{{ bootMsg }}" style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;white-space:pre;line-height:1.6;height:11.2em;width:240px;max-width:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;text-align:left"></div>
+    <div style="position:absolute;left:16px;right:16px;bottom:calc(20px + env(safe-area-inset-bottom, 0px));display:flex;justify-content:space-between;align-items:flex-end;gap:12px">
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+        <div ref="{{ bootMsg }}" style="font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;white-space:pre;line-height:1.6;height:11.2em;width:min(228px,62vw);max-width:100%;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;text-align:left"></div>
+        <canvas ref="{{ bootBar }}" aria-hidden="true" style="display:block;width:min(228px,62vw);height:44px"></canvas>
+      </div>
+      <span ref="{{ bootPct }}" style="font-size:clamp(44px,13vw,64px);font-weight:400;letter-spacing:0;line-height:.8;font-variant-numeric:tabular-nums">000</span>
     </div>
     </sc-if>
   </div>
@@ -762,7 +764,7 @@ class Component extends DCLogic {
     if (document.hidden) return;
     // While the page is actively scrolling, canvas animations redraw at half rate so the scroll itself stays smooth.
     const scrolling = now - (this.lastScrollAt || 0) < 150;
-    const minDt = (this.reduce ? 250 : this.state.mobile ? 50 : 33) * (scrolling ? 2 : 1);
+    const minDt = (this.reduce ? 250 : 33) * (scrolling ? 2 : 1);
     if (now - this.lastHero > minDt) { this.lastHero = now; this.tickGraph(now); this.drawGlobe(now / 1000); }
     if (now - (this.lastHand || 0) > Math.max(minDt, HAND_MS)) { this.lastHand = now; this.drawHero(now / 1000); }
     if (this.state.booting) this.drawBoot(now);
@@ -837,6 +839,9 @@ class Component extends DCLogic {
     const g = this.hg, L = this.hl, ctx = this.hctx;
     for (let i = 0; i < g.heat.length; i++) g.heat[i] *= 0.86;
     const rect = cv.getBoundingClientRect();
+    // Skip the (expensive) redraw when the hand itself is off screen, even if part of the hero section is still visible.
+    const hTop = rect.top + L.oy + g.minR * L.ch - 40, hBot = rect.top + L.oy + (g.maxR + 1) * L.ch + 40;
+    if (hBot < 0 || hTop > window.innerHeight) return;
     const mx = (this.mouse.x - rect.left - L.ox) / L.cw - 0.5, my = (this.mouse.y - rect.top - L.oy) / L.ch - 0.5;
     const R = 6;
     if (mx > -R && my > -R && mx < g.cols + R && my < g.rows + R) {
