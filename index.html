@@ -118,6 +118,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
           <sc-if value="{{ isConsent }}" hint-placeholder-val="{{ false }}">
           <div style="flex:1 1 100%;display:flex;gap:10px;margin-top:8px">
             <button type="button" onClick="{{ answerYes }}" style="display:flex;align-items:center;gap:.5em;background:transparent;color:#7FE9F0;border:1px solid rgba(127,233,240,.6);font-family:inherit;font-size:clamp(14px,3.8vw,17px);letter-spacing:.08em;padding:0 14px;min-height:40px;cursor:pointer" style-hover="background:#7FE9F0;color:var(--bsod,#040805);text-shadow:none;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1)))">[Y] YES</button>
+            <button type="button" onClick="{{ answerNo }}" style="display:flex;align-items:center;gap:.5em;background:transparent;color:#7FE9F0;border:1px solid rgba(127,233,240,.6);font-family:inherit;font-size:clamp(14px,3.8vw,17px);letter-spacing:.08em;padding:0 14px;min-height:40px;cursor:pointer" style-hover="background:#7FE9F0;color:var(--bsod,#040805);text-shadow:none;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1)))">[N] NO</button>
           </div>
           </sc-if>
           <sc-if value="{{ sending }}" hint-placeholder-val="{{ false }}"><div style="flex:1 1 100%;font-size:clamp(14px,3.8vw,17px);letter-spacing:.06em;animation:blink 1s steps(1) infinite">&gt; TRANSMITTING...</div></sc-if>
@@ -1580,6 +1581,7 @@ class Component extends DCLogic {
   focusConsent() { this.refocus(); }
 
   answerYes = () => { if (!this.state.sending) this.setState({ consentAns: "Y", error: "" }, () => this.submit({ preventDefault() {} })); };
+  answerNo = () => { if (!this.state.sending) this.setState({ consentAns: "N", error: "" }, () => this.submit({ preventDefault() {} })); };
 
   submit = e => {
     e.preventDefault();
@@ -1599,7 +1601,8 @@ class Component extends DCLogic {
     if (step === "consent") {
       const a = (this.state.consentAns || "").trim().toLowerCase();
       if (a === "y" || a === "yes") { this.setState({ consent: true }, () => this.finishSignup()); return; }
-      this.setState({ consentAns: "", error: "ERROR 0x26: TYPE Y TO CONTINUE." }, () => this.refocus());
+      if (a === "n" || a === "no") { this.setState({ consentAns: "", error: "ERROR 0x25: NO Y, NO TICKET ACCESS. TYPE Y TO GET NOTIFIED." }, () => this.refocus()); return; }
+      this.setState({ error: "ERROR 0x26: TYPE Y OR N." });
       return;
     }
     const email = (this.state.email || "").trim();
@@ -1698,17 +1701,17 @@ class Component extends DCLogic {
       ...(() => {
         const st = this.state.step || "email", key = st === "consent" ? "consentAns" : st;
         const v = this.state[key] || "", tv = v.trim();
-        const ready = st === "email" ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(tv) : st === "name" ? tv.length > 0 : st === "consent" ? /^(y|yes)$/i.test(tv) : !!normPhone(tv);
+        const ready = st === "email" ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(tv) : st === "name" ? tv.length > 0 : st === "consent" ? /^(y|yes|n|no)$/i.test(tv) : !!normPhone(tv);
         return {
-          promptLabel: st === "email" ? "> RESERVE YOUR SPOT:" : st === "name" ? "> FULL NAME:" : st === "consent" ? "> " + this.consentText() + "? [Y]" : "> MOBILE:",
+          promptLabel: st === "email" ? "> RESERVE YOUR SPOT:" : st === "name" ? "> FULL NAME:" : st === "consent" ? "> " + this.consentText() + "? [Y/N]" : "> MOBILE:",
           labelWs: st === "consent" ? "normal" : "nowrap", labelFlex: st === "consent" ? "1 1 100%" : "0 1 auto",
           fieldVal: v, fieldShown: v,
-          fieldHint: st === "email" ? "ENTER YOUR EMAIL" : st === "name" ? "FIRST + LAST NAME" : st === "consent" ? "TYPE Y" : "04XX XXX XXX",
+          fieldHint: st === "email" ? "ENTER YOUR EMAIL" : st === "name" ? "FIRST + LAST NAME" : st === "consent" ? "Y / N" : "04XX XXX XXX",
           inputType: st === "email" ? "email" : st === "phone" ? "tel" : "text", inputMode: st === "email" ? "email" : st === "phone" ? "tel" : "text", autoC: st === "email" ? "email" : st === "name" ? "name" : st === "consent" ? "off" : "tel",
           onField: e => this.setState({ [key]: e.target.value, error: "" }),
           onFieldKey: e => { if (st === "phone" && e.key === "Tab" && !e.shiftKey) { e.preventDefault(); this.skipPhone(); } },
           isPhone: st === "phone", isConsent: st === "consent", history: this.state.history || [],
-          answerYes: this.answerYes, sending: !!this.state.sending,
+          answerYes: this.answerYes, answerNo: this.answerNo, sending: !!this.state.sending,
           emailEmpty: !v, emailFilled: !!v, emailReady: ready, emailNotReady: !ready
         };
       })(),
