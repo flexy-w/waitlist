@@ -151,10 +151,9 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     </sc-if>
     <sc-if value="{{ hypeOn }}" hint-placeholder-val="{{ true }}">
       <div aria-hidden="true" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:16px;max-width:720px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-variant-numeric:tabular-nums">
-        <span style="display:flex;align-items:center;gap:10px;opacity:.9"><span style="width:6px;height:6px;background:#3DFF6E;box-shadow:0 0 6px #3DFF6E;animation:blink 1.2s steps(1) infinite"></span><span><span ref="{{ hypeTotal }}" style="padding:0 .2em;transition:background .6s,color .6s">—</span> REGISTERED</span></span>
-        <span style="opacity:.45">//</span>
         <span style="display:flex;align-items:center;gap:8px">
-          <span style="opacity:.75">CAPACITY</span>
+          <span style="width:6px;height:6px;margin-right:2px;background:#3DFF6E;box-shadow:0 0 6px #3DFF6E;animation:blink 1.2s steps(1) infinite"></span>
+          <span style="opacity:.85">WAITLIST CAPACITY</span>
           <span style="flex:0 0 auto;width:88px;height:7px;border:1px solid rgba(127,233,240,.6);position:relative;overflow:hidden;box-shadow:0 0 8px rgba(127,233,240,calc(.3 * var(--g,1)))"><span ref="{{ capFill }}" style="position:absolute;left:0;top:0;bottom:0;width:0;transition:width .8s,background .8s"></span></span>
           <span ref="{{ capPct }}" style="min-width:3.5ch">—</span>
           <span ref="{{ capNote }}"></span>
@@ -810,9 +809,9 @@ class Component extends DCLogic {
   }
 
   tickHype() {
-    if (!(this.props.hypeCounter ?? true) || !this.hypeTotal.current) return;
+    if (!(this.props.hypeCounter ?? true) || !this.capFill.current) return;
     const st = this.hypeState(Date.now()), el = this.hypeTotal.current, txt = st.total.toLocaleString("en-US");
-    if (el.textContent !== txt) {
+    if (el && el.textContent !== txt) {
       const bump = el.textContent !== "—"; el.textContent = txt;
       if (bump && !this.reduce) { el.style.background = "#7FE9F0"; el.style.color = "var(--bsod,#040805)"; clearTimeout(this.hypeFlash); this.hypeFlash = setTimeout(() => { el.style.background = ""; el.style.color = ""; }, 700); }
     }
