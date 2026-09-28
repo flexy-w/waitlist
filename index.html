@@ -1192,15 +1192,15 @@ class Component extends DCLogic {
   }
 
   // (fsin(x) = sin(2πx) from a lookup table; the wavetable evaluates ~30k sines per frame.)
-  // Loader backdrop: a dotted 3D wavetable (stacked, morphing waveforms receding into depth), shimmering and
-  // kicking on a 174 BPM beat, and powering up as the counter climbs. Plain dots, no shadowBlur, to stay cheap.
+  // Loader backdrop: a dotted 3D wavetable (stacked, morphing waveforms receding into depth). The surface stays
+  // put; only the waveforms move (morph, drift and shimmer), powering up as the counter climbs. Plain dots, no shadowBlur, to stay cheap.
   drawWavetable(ctx, W, H, t) {
     const mobile = W < 640, N = mobile ? 64 : 72, M = mobile ? 14 : 16;
-    const tt = this.reduce ? t * 0.08 : t, beat = 60 / 174, k = (tt % beat) / beat, kick = this.reduce ? 0 : Math.exp(-k * 6);
+    const tt = this.reduce ? t * 0.08 : t;
     const power = 0.35 + 0.65 * Math.min(1, (this.bp || 0) / 174);
     // Small, and parked just above the loading readout: above the message + bar on desktop, above the counter on phones.
     const Wf = mobile ? Math.min(W * 0.5, 190) : 260, depthH = Wf * 0.3, dxBack = Wf * 0.2;
-    const A = Wf * 0.14 * power * (1 + 0.3 * kick), lift = -kick * Wf * 0.07;
+    const A = Wf * 0.14 * power;
     const anchorEl = mobile ? this.bootPct.current : this.bootMsg.current, ar = anchorEl ? anchorEl.getBoundingClientRect() : null;
     const frontY = (ar ? ar.top : H * 0.7) - 22 - A * 0.5;
     const cx = mobile ? (ar ? ar.left + ar.width / 2 : W / 2) - dxBack / 2 : (ar ? ar.left : 40) + Wf / 2, cy = frontY - depthH / 2;
@@ -1210,7 +1210,7 @@ class Component extends DCLogic {
       const d = j / (M - 1), sc = 1 - 0.38 * d;
       const m = 0.5 + 0.5 * Math.sin(d * 3.1 + tt * 0.7);
       const c1 = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(tt * 0.9 + d * 5)), c2 = 0.65 + 0.25 * Math.sin(tt * 0.6 - d * 4);
-      const ox = cx + d * dxBack, oy = cy + (0.5 - d) * depthH + lift * (1 - d * 0.5);
+      const ox = cx + d * dxBack, oy = cy + (0.5 - d) * depthH;
       ctx.globalAlpha = 0.3 + 0.7 * (1 - d * 0.75);
       const rr = r * sc;
       for (let h = 1; h <= 8; h++) ph[h] = (d * h * 1.7 + (h > 4 ? tt * h * 0.4 : 0)) / TAU;
@@ -1222,7 +1222,7 @@ class Component extends DCLogic {
         const e1 = (u - c1) * (u - c1), e2 = (u - c2) * (u - c2);
         if (e1 < 0.04) w += Math.exp(-e1 / 0.004) * 0.9;
         if (e2 < 0.02) w += Math.exp(-e2 / 0.002) * 0.6 * m;
-        w += fsin((u * 90 + tt * 38 + d * 7) / TAU) * 0.05 * (0.4 + kick);
+        w += fsin((u * 90 + tt * 38 + d * 7) / TAU) * 0.04;
         const env = ENV[Math.round(u * 255)];
         const px = ox + (u - 0.5) * Wf * sc, py = oy - w * env * A * sc;
         ctx.rect(px - rr / 2, py - rr / 2, rr, rr);
