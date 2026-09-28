@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SURROUND — Sydney Drum &amp; Bass</title>
 <meta name="description" content="The filthiest Drum &amp; Bass party Sydney has ever seen. One night only. Join the waitlist.">
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://fonts.cdnfonts.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -312,6 +315,10 @@ const RAMP = " .:-=+*#%@";
 const GLITCH = "!<>-_/[]{}=+*^?#01%&$@";
 const PALETTE = ["#7FE9F0", "#C9FFF9", "#F2FFFF"];
 const STORE = "headspace_waitlist";
+// Canvas resolution caps: the soft phosphor art looks the same slightly below full Retina resolution, for far fewer pixels per frame.
+const HAND_DPR = 1.5, SCOPE_DPR = 1.25;
+// The hand redraws at 20fps (its float and shimmer are slow), the globe and graph at 30fps.
+const HAND_MS = 50;
 // Australian mobile (04xx / +614xx) normalised to +614xxxxxxxx, or any international number in +E.164 form.
 const normPhone = v => { const d = String(v || "").replace(/[\s\-().]/g, ""); const m = d.match(/^(?:\+?61|0)(4\d{8})$/); if (m) return "+61" + m[1]; return /^\+[1-9]\d{7,14}$/.test(d) ? d : null; };
 const WAITLIST_URL = "https://script.google.com/macros/s/AKfycbxcCwasuYrTX4i42LMVcvNFsjOYkv7x0x2SY8ODBw07EBY4w2QwmyhASXyhK113rHpvuQ/exec";
@@ -449,6 +456,8 @@ function renderScope(ctx, g, ox, oy, cw, chh, t, color, useHeat) {
 }
 
 let FONT_READY = false;
+// Glyph glow is cropped at 0.75x the blur radius; the tail beyond that is invisible but was most of the blending cost.
+const GLOW_PAD = 0.75;
 const GLYPHS = new Map(), ATLAS_CHARS = [...new Set(RAMP + GLITCH)].join("");
 if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", () => GLYPHS.clear());
 // All glyphs for one size/colour/glow share a single atlas canvas, so the hand draws from one texture per frame.
@@ -456,7 +465,7 @@ function glyphAtlas(fs, color, blur, sc, dpr) {
   const k = fs.toFixed(1) + "|" + color + "|" + blur.toFixed(1) + "|" + dpr;
   let a = GLYPHS.get(k); if (a) return a;
   if (GLYPHS.size > 40) GLYPHS.clear();
-  const pad = Math.ceil(blur * 1.5 + 2), w = Math.ceil(fs * 0.7 + pad * 2), hgt = Math.ceil(fs * 1.2 + pad * 2);
+  const pad = Math.ceil(blur * GLOW_PAD + 1), w = Math.ceil(fs * 0.7 + pad * 2), hgt = Math.ceil(fs * 1.2 + pad * 2);
   const cellW = Math.ceil(w * dpr) + 2, cellH = Math.ceil(hgt * dpr);
   const c = document.createElement("canvas"); c.width = cellW * ATLAS_CHARS.length; c.height = cellH;
   const x = c.getContext("2d");
@@ -731,7 +740,8 @@ class Component extends DCLogic {
   frame(now) {
     if (document.hidden) return;
     const minDt = this.reduce ? 250 : this.state.mobile ? 50 : 33;
-    if (now - this.lastHero > minDt) { this.lastHero = now; this.tickGraph(now); this.drawHero(now / 1000); this.drawGlobe(now / 1000); }
+    if (now - this.lastHero > minDt) { this.lastHero = now; this.tickGraph(now); this.drawGlobe(now / 1000); }
+    if (now - (this.lastHand || 0) > Math.max(minDt, HAND_MS)) { this.lastHand = now; this.drawHero(now / 1000); }
     if (this.state.booting) this.drawBoot(now);
   }
 
@@ -756,7 +766,7 @@ class Component extends DCLogic {
     const hk = [this.props.handX ?? 0, this.props.handY ?? 0, this.props.handSize ?? 1, this.state.mobile ? tBot : 0, this.state.mobile ? this.mOffsets().y : 0, this.state.mobile ? tTopM + mLayout + slotTop + "/" + slotH : 0, tEl ? Math.round(tEl.getBoundingClientRect().top - wr0.top) : 0, tEl ? Math.round(tEl.getBoundingClientRect().width) : 0].join();
     if (W !== this.hW || H !== this.hH || cv !== this.hcv || hk !== this.hk) {
       this.hW = W; this.hH = H; this.hcv = cv; this.hk = hk;
-      const dpr = Math.min(window.innerWidth < 640 ? 1.5 : 2, window.devicePixelRatio || 1);
+      const dpr = Math.min(HAND_DPR, window.devicePixelRatio || 1);
       cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px";
       this.hctx = cv.getContext("2d"); this.hctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const cols = W < 720 ? 56 : 84;
@@ -915,7 +925,7 @@ class Component extends DCLogic {
     const W = wrap.clientWidth, H = wrap.clientHeight;
     if (W !== this.gW || H !== this.gH || cv !== this.gcv) {
       this.gW = W; this.gH = H; this.gcv = cv;
-      const dpr = Math.min(window.innerWidth < 640 ? 1.5 : 2, window.devicePixelRatio || 1);
+      const dpr = Math.min(SCOPE_DPR, window.devicePixelRatio || 1);
       cv.width = W * dpr; cv.height = H * dpr;
       this.gctx = cv.getContext("2d"); this.gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
@@ -1082,7 +1092,7 @@ class Component extends DCLogic {
   tickGraph(now) {
     const cv = this.graphCanvas.current; if (!cv) return;
     const r = cv.getBoundingClientRect(); if (r.bottom < 0 || r.top > window.innerHeight || !r.width) return;
-    const W = r.width, H = r.height, dpr = Math.min(window.innerWidth < 640 ? 1.5 : 2, window.devicePixelRatio || 1);
+    const W = r.width, H = r.height, dpr = Math.min(SCOPE_DPR, window.devicePixelRatio || 1);
     if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
     const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
     const STEP = 140, N = 48;
@@ -1122,7 +1132,7 @@ class Component extends DCLogic {
     const W = window.innerWidth, H = window.innerHeight;
     if (!this.bctx || cv !== this.bcv || W !== this.bW || H !== this.bH) {
       this.bcv = cv; this.bW = W; this.bH = H;
-      const dpr = Math.min(window.innerWidth < 640 ? 1.5 : 2, window.devicePixelRatio || 1);
+      const dpr = Math.min(HAND_DPR, window.devicePixelRatio || 1);
       cv.width = W * dpr; cv.height = H * dpr;
       this.bctx = cv.getContext("2d"); this.bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       this.bcw = Math.max(2.2, Math.min(4, Math.min(W, H) / 140));

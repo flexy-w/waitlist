@@ -60,7 +60,13 @@ There are two parts:
 - `redactGlitch()`: an occasional scramble on [REDACTED] tags, drawn as an overlay so the layout never moves.
 - `buildLens` / `syncLens`: the lens warp SVG filter.
 - `submit` / `finishSignup()`: the signup flow, one question at a time: email → full name → mobile (optional, `[TAB] SKIP`; validated and normalised by `normPhone` to `+614…` or international `+…`) → consent checkbox (required; "GET NOTIFIED WHEN TICKETS GO ON SALE", from `consentText()`) → JOIN. `sendSignup(data)` POSTs `{ email, name, phone, consent_email, consent_sms, consent_text, list }` to `WAITLIST_URL`, and the visitor is also saved to localStorage.
-- `frame(now)`: the main animation loop, about 30fps on desktop and 20fps on phones, paused when the tab is hidden.
+- `frame(now)`: the main animation loop, paused when the tab is hidden. Globe and graph redraw at ~30fps (20fps on phones); the hand redraws at 20fps (`HAND_MS`).
+
+## Performance (keep these, they took profiling to find)
+- Canvas resolution is capped: `HAND_DPR` 1.5 (hand and loader), `SCOPE_DPR` 1.25 (globe and graph). Full Retina resolution quadruples the pixels redrawn every frame.
+- Glyph glow sprites are cropped at `GLOW_PAD` (0.75× the blur radius). The invisible tail beyond that was most of the blending cost.
+- `lensWarp` stays off: its SVG displacement filter re-filters whole sections every frame.
+- Measured in Chromium at 1440×900 @2x: ~58fps on the hero, 60fps on the events section and on phones.
 
 ## Design rules (keep these)
 - **Font:** VCR OSD Mono (loaded from fonts.cdnfonts.com), everything **UPPERCASE**.
