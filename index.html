@@ -134,7 +134,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
     </sc-if>
 
     <sc-if value="{{ joined }}" hint-placeholder-val="{{ false }}">
-      <div style="display:flex;flex-direction:column;gap:8.8px;max-width:640px;border:2px solid #7FE9F0;padding:18px 20px;font-size:16px;line-height:1.54;background:var(--bsod,#040805);box-shadow:0 0 10px rgba(127,233,240,calc(.35 * var(--g,1))),inset 0 0 10px rgba(127,233,240,calc(.12 * var(--g,1)))">
+      <div style="display:flex;flex-direction:column;gap:8.8px;max-width:640px;padding:18px 0;font-size:16px;line-height:1.54">
         <sc-for list="{{ logLines }}" as="line" hint-placeholder-count="0">
           <div style="letter-spacing:.02em;overflow-wrap:anywhere">{{ line }}</div>
         </sc-for>
@@ -142,12 +142,12 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
           <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
             <div style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center">
               <button onClick="{{ copyInvite }}" style="background:#7FE9F0;color:var(--bsod,#040805);border:0;font-family:inherit;font-size:13px;letter-spacing:.08em;padding:0 14px;min-height:40px;text-shadow:none;cursor:pointer;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))" style-hover="background:#F2FFFF;box-shadow:0 0 18px rgba(127,233,240,calc(.9 * var(--g,1))),0 0 4px rgba(242,255,255,.9)">[{{ copyLabel }}]</button>
-              <span style="font-size:13px">EACH FRIEND WHO JOINS MOVES YOU UP 50 PLACES.</span>
+              <span style="font-size:13px">EACH CONFIRMED REFERRAL MOVES YOU UP THE QUEUE.</span>
             </div>
           </div>
         </sc-if>
         <sc-if value="{{ showReset }}" hint-placeholder-val="{{ false }}">
-          <button onClick="{{ reset }}" style="align-self:flex-start;background:none;border:0;padding:4px 0;color:#7FE9F0;font-family:inherit;font-size:12px;text-decoration:underline;text-transform:uppercase;letter-spacing:.04em">Not you? Re-enter email</button>
+          <button onClick="{{ reset }}" style="align-self:flex-start;margin-top:1.02px;background:none;border:0;padding:4px 0;color:#7FE9F0;font-family:inherit;font-size:12px;text-decoration:underline;text-transform:uppercase;letter-spacing:.04em">Not you? Re-enter email</button>
         </sc-if>
       </div>
     </sc-if>
@@ -543,7 +543,7 @@ class Component extends DCLogic {
     try { saved = JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) {}
     return {
       booting: (this.props.preloader ?? true) && ((this.props.introEveryLoad ?? false) || /intro/.test(location.hash + location.search) || (() => { try { return !sessionStorage.getItem("hs_booted"); } catch (e) { return true; } })()),
-      email: saved ? saved.email : "", joined: !!saved, overflow: !!(saved && saved.overflow), fullOpen: false, pos: saved ? saved.pos : 0,
+      email: saved ? saved.email : "", name: saved && saved.name || "", joined: !!saved, overflow: !!(saved && saved.overflow), fullOpen: false, pos: saved ? saved.pos : 0,
       logShown: saved ? 4 : 0, error: "", copied: false, eventsTab: "up", mobile: typeof window !== "undefined" && window.innerWidth < 640, hud: typeof window !== "undefined" && window.innerWidth >= 900
     };
   })();
