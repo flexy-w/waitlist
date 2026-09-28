@@ -40,6 +40,7 @@ There are two parts:
 | `preloader` / `introEveryLoad` | true / false | Loading screen; once per session unless introEveryLoad |
 | `customCursor` | true | Blinking block mouse cursor with X/Y readout (desktop mice only) |
 | `radioStreamUrl` | "" | Real stream URL for the radio toggle. Empty means the built-in 174 BPM synth. |
+| `graphStyle` | "wavetable" | Graph Data panel: `wavetable` (dotted 3D wavetable / radio spectrum waterfall) or `lines` (original 3-line graph) |
 | `queueBase` | 78 | Queue position shown to the first sign-up (#78), counting up from there. Until sign-ups are stored in a database this count is per browser, so every new visitor sees #78. |
 | `waitlistFull` | false | FOMO mode: sign-ups get a "WAITLIST FULL" pop-up and go on the overflow list (sent with `list: "overflow"`); status shows WAITLIST FULL |
 | `screenBlue` | #040805 | Background colour |
@@ -54,7 +55,7 @@ There are two parts:
 ## Key logic (method names, so you can search for them)
 - `drawHero(t)`: ASCII hand layout, cursor-heat glitch and float. It uses `buildGrid`, `buildFromImage` and `renderGrid` (top of the script). Glowing glyphs are drawn from one pre-rendered atlas canvas per size/colour (`glyphAtlas`).
 - `drawGlobe(t)` / `drawGlobeText`: a 19s globe loop. It spins to Australia, targets Sydney, zooms in with the analysis, zooms out, then makes one full rotation. It has phosphor trails and a faint scope grid, and country outlines load from jsdelivr world-atlas.
-- `tickGraph(now)`: the jagged 3-line data graph.
+- `tickGraph(now)`: the Graph Data panel. With `graphStyle` "wavetable" (default) it calls `drawPanelWavetable`: a dotted cyan 3D wavetable of morphing waveforms, which becomes a live spectrum waterfall when the radio is on. `graphStyle` "lines" restores the original jagged 3-line graph.
 - `initBoot` / `drawBoot` / `exitBoot`: the preloader and the CRT switch-off exit.
 - `startRadio` / `stopRadio` / `startSynth`: the radio toggle (Web Audio).
 - `redactGlitch()`: an occasional scramble on [REDACTED] tags, drawn as an overlay so the layout never moves.
