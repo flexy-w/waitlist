@@ -100,6 +100,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
           <div style="font-size:clamp(14px,3.8vw,17px);letter-spacing:.02em;opacity:.8;overflow-wrap:anywhere">{{ hl }}</div>
         </sc-for>
         <form onSubmit="{{ submit }}" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;max-width:720px;font-size:clamp(16px,4.6vw,20px)">
+          <sc-if value="{{ notConsent }}" hint-placeholder-val="{{ true }}">
           <label for="hs-email" style="white-space:nowrap">{{ promptLabel }}</label>
           <div style="position:relative;flex:1 1 200px;min-width:0;display:flex">
             <input id="hs-email" ref="{{ emailRef }}" type="{{ inputType }}" inputmode="{{ inputMode }}" autocomplete="{{ autoC }}" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" onFocus="{{ onEmailFocus }}" aria-label="{{ promptLabel }}" value="{{ fieldVal }}" onChange="{{ onField }}" onKeyDown="{{ onFieldKey }}" style="width:100%;min-width:0;background:transparent;border:0;outline:0;padding:8px 0;color:transparent;caret-color:transparent;font-family:inherit;font-size:inherit;text-transform:uppercase">
@@ -112,8 +113,17 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
           </div>
           
           <sc-if value="{{ emailReady }}" hint-placeholder-val="{{ false }}"><button type="submit" aria-label="Submit" style="flex:0 0 auto;background:#7FE9F0;color:var(--bsod,#040805);border:0;font-family:inherit;font-size:20px;padding:0 6px;min-height:44px;min-width:44px;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))" style-hover="background:#F2FFFF;box-shadow:0 0 18px rgba(127,233,240,calc(.9 * var(--g,1))),0 0 4px rgba(242,255,255,.9)">↵</button></sc-if>
+          </sc-if>
+          <sc-if value="{{ isConsent }}" hint-placeholder-val="{{ false }}">
+          <label for="hs-consent" style="position:relative;flex:1 1 100%;display:flex;gap:12px;align-items:flex-start;cursor:pointer;font-size:clamp(14px,3.8vw,17px);line-height:1.5;max-width:640px;padding:4px 0">
+            <input id="hs-consent" ref="{{ consentRef }}" type="checkbox" checked="{{ consent }}" onChange="{{ onConsent }}" onKeyDown="{{ onConsentKey }}" onFocus="{{ onConsentFocus }}" onBlur="{{ onConsentBlur }}" style="position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;margin:0">
+            <span aria-hidden="true" style="flex:0 0 auto;padding:0 .2em;background:{{ boxBg }};color:{{ boxFg }};outline:{{ boxOutline }};outline-offset:3px;text-shadow:none">{{ boxMark }}</span>
+            <span>{{ consentText }}</span>
+          </label>
+          <button type="submit" style="margin-top:6px;background:#7FE9F0;color:var(--bsod,#040805);border:0;font-family:inherit;font-size:inherit;letter-spacing:.06em;padding:0 16px;min-height:44px;text-shadow:none;cursor:pointer;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))" style-hover="background:#F2FFFF;box-shadow:0 0 18px rgba(127,233,240,calc(.9 * var(--g,1))),0 0 4px rgba(242,255,255,.9)">&gt; JOIN WAITLIST</button>
+          </sc-if>
         </form>
-        <sc-if value="{{ isHandle }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ skipHandle }}" style="align-self:flex-start;background:transparent;color:#7FE9F0;border:0;padding:4px 0;font-family:inherit;font-size:11px;letter-spacing:.08em;opacity:.8;cursor:pointer" style-hover="opacity:1">[TAB] SKIP — OPTIONAL, FOR THE DOOR LIST</button></sc-if>
+        <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ skipPhone }}" style="align-self:flex-start;background:transparent;color:#7FE9F0;border:0;padding:4px 0;font-family:inherit;font-size:11px;letter-spacing:.08em;opacity:.8;cursor:pointer" style-hover="opacity:1">[TAB] SKIP — OPTIONAL</button></sc-if>
         </sc-if>
         <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}">
           <div style="font-size:14px;letter-spacing:.04em;background:#7FE9F0;color:var(--bsod,#040805);padding:6px 10px;align-self:flex-start;font-weight:400;box-shadow:0 0 12px rgba(127,233,240,calc(.55 * var(--g,1))),0 0 3px rgba(127,233,240,calc(.7 * var(--g,1)))">{{ error }}</div>
@@ -303,6 +313,8 @@ const RAMP = " .:-=+*#%@";
 const GLITCH = "!<>-_/[]{}=+*^?#01%&$@";
 const PALETTE = ["#7FE9F0", "#C9FFF9", "#F2FFFF"];
 const STORE = "headspace_waitlist";
+// Australian mobile (04xx / +614xx) normalised to +614xxxxxxxx, or any international number in +E.164 form.
+const normPhone = v => { const d = String(v || "").replace(/[\s\-().]/g, ""); const m = d.match(/^(?:\+?61|0)(4\d{8})$/); if (m) return "+61" + m[1]; return /^\+[1-9]\d{7,14}$/.test(d) ? d : null; };
 const WAITLIST_URL = "https://script.google.com/macros/s/AKfycbxcCwasuYrTX4i42LMVcvNFsjOYkv7x0x2SY8ODBw07EBY4w2QwmyhASXyhK113rHpvuQ/exec";
 const TARGET = new Date(2026, 10, 19, 22, 0, 0);
 const rnd = s => s[(Math.random() * s.length) | 0];
@@ -530,7 +542,7 @@ class Component extends DCLogic {
 
   constructor(p) {
     super(p);
-    ["root", "fullOk", "hero", "heroCanvas", "boot", "bootCanvas", "bootPct", "bootBar", "bootMsg", "bootCorners", "clock", "queue", "cdD", "cdH", "cdM", "cdS", "cursor", "cursorBox", "cursorLbl", "emailRef", "hudHex", "hudUp", "hudSig", "hudNode", "hudDb", "hudLat", "hudPkt", "hudEq", "hudCoord", "cdLine", "artWrap", "artCanvas", "artLabel", "globeWrap", "globeCanvas", "globeStatus", "globeZoom", "heroText", "hudWrap", "handSlot", "radioEq", "waveCanvas", "lensImg", "lensDisp", "lensImgX", "lensDispX", "pongCanvas", "pongWrap", "pongP", "pongC", "graphCanvas", "cX", "cY", "cZ", "gaugeL", "gaugeR"].forEach(k => (this[k] = React.createRef()));
+    ["root", "fullOk", "consentRef", "hero", "heroCanvas", "boot", "bootCanvas", "bootPct", "bootBar", "bootMsg", "bootCorners", "clock", "queue", "cdD", "cdH", "cdM", "cdS", "cursor", "cursorBox", "cursorLbl", "emailRef", "hudHex", "hudUp", "hudSig", "hudNode", "hudDb", "hudLat", "hudPkt", "hudEq", "hudCoord", "cdLine", "artWrap", "artCanvas", "artLabel", "globeWrap", "globeCanvas", "globeStatus", "globeZoom", "heroText", "hudWrap", "handSlot", "radioEq", "waveCanvas", "lensImg", "lensDisp", "lensImgX", "lensDispX", "pongCanvas", "pongWrap", "pongP", "pongC", "graphCanvas", "cX", "cY", "cZ", "gaugeL", "gaugeR"].forEach(k => (this[k] = React.createRef()));
     this.queueN = (p && p.queueBase != null ? p.queueBase : 200);
     this.mouse = { x: -9999, y: -9999 };
   }
@@ -1306,18 +1318,30 @@ class Component extends DCLogic {
 
   refocus() { setTimeout(() => { const el = this.emailRef.current; if (el) el.focus({ preventScroll: true }); }, 30); }
 
-  skipHandle = () => { this.finishSignup(""); };
+  skipPhone = () => { this.setState(s => ({ step: "consent", phone: "", error: "", history: [...(s.history || []), "> MOBILE: SKIPPED"] }), () => this.focusConsent()); };
+
+  focusConsent() { setTimeout(() => { const el = this.consentRef.current; if (el) el.focus({ preventScroll: true }); }, 30); }
 
   submit = e => {
     e.preventDefault();
     const step = this.state.step || "email";
     if (step === "name") {
-      const name = (this.state.name || "").trim().slice(0, 40);
+      const name = (this.state.name || "").trim().replace(/\s+/g, " ").slice(0, 80);
       if (!name) { this.setState({ error: "ERROR 0x22: NAME REQUIRED." }); return; }
-      this.setState(s => ({ step: "handle", error: "", history: [...(s.history || []), "> WHAT DO WE CALL YOU? " + name.toUpperCase()] }), () => this.refocus());
+      this.setState(s => ({ step: "phone", name, error: "", history: [...(s.history || []), "> FULL NAME: " + name.toUpperCase()] }), () => this.refocus());
       return;
     }
-    if (step === "handle") { this.finishSignup((this.state.handle || "").trim().replace(/^@+/, "").slice(0, 40)); return; }
+    if (step === "phone") {
+      const phone = normPhone(this.state.phone);
+      if (!phone) { this.setState({ error: "ERROR 0x24: ENTER A MOBILE NUMBER, E.G. 0412 345 678." }); return; }
+      this.setState(s => ({ step: "consent", phone, error: "", history: [...(s.history || []), "> MOBILE: " + phone] }), () => this.focusConsent());
+      return;
+    }
+    if (step === "consent") {
+      if (!this.state.consent) { this.setState({ error: "ERROR 0x25: TICK THE BOX SO WE CAN SEND YOU TICKET ACCESS." }); return; }
+      this.finishSignup();
+      return;
+    }
     const email = (this.state.email || "").trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       this.setState({ error: "ERROR 0x21: INVALID ADDRESS. TRY AGAIN." });
@@ -1328,16 +1352,23 @@ class Component extends DCLogic {
     this.setState({ step: "name", error: "", history: ["> RESERVE YOUR SPOT: " + email.toUpperCase(), "> EMAIL LOCKED ✓"] }, () => this.refocus());
   };
 
-  finishSignup(handle) {
-    const email = (this.state.email || "").trim(), name = (this.state.name || "").trim();
+  finishSignup() {
+    const email = (this.state.email || "").trim(), name = (this.state.name || "").trim(), phone = this.state.phone || "";
+    const consent = { email: true, sms: !!phone };
     const pos = this.queueN + 1; this.queueN = pos; this.setState({ qn: pos });
-    try { localStorage.setItem(STORE, JSON.stringify({ email, name, handle, pos })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
-    this.sendSignup({ email, name, handle });
-    this.setState({ joined: true, overflow: false, pos, error: "", logShown: 0, handle, step: "email", history: [] });
+    try { localStorage.setItem(STORE, JSON.stringify({ email, name, phone, pos })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
+    this.sendSignup({ email, name, phone, consent_email: consent.email, consent_sms: consent.sms, consent_text: this.consentText(), list: "main" });
+    this.setState({ joined: true, overflow: false, pos, error: "", logShown: 0, step: "email", history: [] });
     clearInterval(this.logTimer);
     this.logTimer = setInterval(() => {
       this.setState(s => ({ logShown: s.logShown + 1 }), () => { if (this.state.logShown >= 2) clearInterval(this.logTimer); });
     }, 420);
+  }
+
+  consentText() {
+    return this.state.phone
+      ? "YES, EMAIL AND TEXT ME TICKET, DATE AND VENUE UPDATES FOR SURROUND. UNSUBSCRIBE ANYTIME."
+      : "YES, EMAIL ME TICKET, DATE AND VENUE UPDATES FOR SURROUND. UNSUBSCRIBE ANYTIME.";
   }
 
   sendSignup(data) {
@@ -1346,7 +1377,7 @@ class Component extends DCLogic {
 
   joinOverflow(email) {
     try { localStorage.setItem(STORE, JSON.stringify({ email, overflow: true })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
-    this.sendSignup({ email, name: "", handle: "", list: "overflow" });
+    this.sendSignup({ email, name: "", phone: "", consent_email: true, consent_sms: false, list: "overflow" });
     clearInterval(this.logTimer);
     this.lastFocus = document.activeElement;
     this.setState({ joined: true, overflow: true, fullOpen: true, pos: 0, error: "", logShown: 2, step: "email", history: [] }, () => setTimeout(() => { const b = this.fullOk.current; if (b) b.focus({ preventScroll: true }); }, 30));
@@ -1366,7 +1397,7 @@ class Component extends DCLogic {
 
   reset = () => {
     try { localStorage.removeItem(STORE); } catch (e) {}
-    this.setState({ joined: false, overflow: false, started: true, email: "", name: "", handle: "", step: "email", history: [], logShown: 0, pos: 0 }, () => setTimeout(this.focusForm, 50));
+    this.setState({ joined: false, overflow: false, started: true, email: "", name: "", phone: "", consent: false, step: "email", history: [], logShown: 0, pos: 0 }, () => setTimeout(this.focusForm, 50));
   };
 
   renderVals() {
@@ -1376,7 +1407,7 @@ class Component extends DCLogic {
       "> WAITLIST FULL. YOU'RE ON THE OVERFLOW LIST.",
       "> WE'LL EMAIL YOU AS SOON AS MORE SLOTS OPEN."
     ] : [
-      "> YOU'RE IN, " + (this.state.name || "RAVER").toUpperCase() + ".",
+      "> YOU'RE IN, " + ((this.state.name || "").split(" ")[0] || "RAVER").toUpperCase() + ".",
       "> QUEUE POSITION: #" + (pos || 0).toLocaleString("en-US")
     ];
     return {
@@ -1396,17 +1427,23 @@ class Component extends DCLogic {
       booting, joined, notJoined: !joined, fullOpen: !!this.state.fullOpen, closeFull: this.closeFull, stopClick: e => e.stopPropagation(), fullOk: this.fullOk, fullEmail: (email || "").trim().toUpperCase(), statusText: full ? "WAITLIST FULL" : "WAITLIST ONLINE", blinkCol: full ? "#FFB347" : "#3DFF6E", showReset: logShown >= 2, email, emailEmpty: !email, emailFilled: !!email, emailReady: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim()), emailNotReady: !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((email || "").trim()), heroShift: this.state.mobile ? "translate(" + this.mOffsets().x + "px," + this.mOffsets().y + "px)" : "translate(" + (this.props.heroTextX ?? 0) + "px," + (this.props.heroTextY ?? 0) + "px)", notMobile: !this.state.mobile,
       onEmail: e => this.setState({ email: e.target.value, error: "" }),
       ...(() => {
-        const st = this.state.step || "email", key = st === "email" ? "email" : st === "name" ? "name" : "handle";
+        const st = this.state.step || "email", key = st === "consent" ? "email" : st;
         const v = this.state[key] || "", tv = v.trim();
-        const ready = st === "email" ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(tv) : st === "name" ? tv.length > 0 : tv.replace(/^@+/, "").length > 0;
+        const ready = st === "email" ? /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(tv) : st === "name" ? tv.length > 0 : !!normPhone(tv);
+        const on = !!this.state.consent, foc = !!this.state.consentFocus;
         return {
-          promptLabel: st === "email" ? "> RESERVE YOUR SPOT:" : st === "name" ? "> WHAT DO WE CALL YOU?" : "> INSTAGRAM / TIKTOK HANDLE?",
-          fieldVal: v, fieldShown: st === "handle" && tv && !tv.startsWith("@") ? "@" + v : v,
-          fieldHint: st === "email" ? "ENTER YOUR EMAIL" : st === "name" ? "YOUR NAME" : "@HANDLE",
-          inputType: st === "email" ? "email" : "text", inputMode: st === "email" ? "email" : "text", autoC: st === "email" ? "email" : st === "name" ? "given-name" : "off",
+          promptLabel: st === "email" ? "> RESERVE YOUR SPOT:" : st === "name" ? "> FULL NAME:" : "> MOBILE:",
+          fieldVal: v, fieldShown: v,
+          fieldHint: st === "email" ? "ENTER YOUR EMAIL" : st === "name" ? "FIRST + LAST NAME" : "04XX XXX XXX",
+          inputType: st === "email" ? "email" : st === "phone" ? "tel" : "text", inputMode: st === "email" ? "email" : st === "phone" ? "tel" : "text", autoC: st === "email" ? "email" : st === "name" ? "name" : "tel",
           onField: e => this.setState({ [key]: e.target.value, error: "" }),
-          onFieldKey: e => { if (st === "handle" && e.key === "Tab") { e.preventDefault(); this.skipHandle(); } },
-          isHandle: st === "handle", history: this.state.history || [],
+          onFieldKey: e => { if (st === "phone" && e.key === "Tab" && !e.shiftKey) { e.preventDefault(); this.skipPhone(); } },
+          isPhone: st === "phone", isConsent: st === "consent", notConsent: st !== "consent", history: this.state.history || [],
+          consentRef: this.consentRef, consent: on, consentText: this.consentText(),
+          boxMark: on ? "[X]" : "[ ]", boxBg: on ? "#7FE9F0" : "transparent", boxFg: on ? "var(--bsod,#040805)" : "#7FE9F0", boxOutline: foc ? "1px solid #7FE9F0" : "none",
+          onConsent: e => this.setState({ consent: e.target.checked, error: "" }),
+          onConsentKey: e => { if (e.key === "Enter") { e.preventDefault(); this.submit({ preventDefault() {} }); } },
+          onConsentFocus: () => this.setState({ consentFocus: true }), onConsentBlur: () => this.setState({ consentFocus: false }),
           emailEmpty: !v, emailFilled: !!v, emailReady: ready, emailNotReady: !ready
         };
       })(),

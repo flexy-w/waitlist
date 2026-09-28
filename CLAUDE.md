@@ -59,7 +59,7 @@ There are two parts:
 - `startRadio` / `stopRadio` / `startSynth`: the radio toggle (Web Audio).
 - `redactGlitch()`: an occasional scramble on [REDACTED] tags, drawn as an overlay so the layout never moves.
 - `buildLens` / `syncLens`: the lens warp SVG filter.
-- `submit` / `finishSignup(handle)`: the signup flow (email → name → handle). **Signups are currently only saved to the visitor's localStorage.** To collect them, add a `fetch` POST in `finishSignup`, for example to Formspree (`https://formspree.io/f/XXXX`) or a Google Apps Script web app.
+- `submit` / `finishSignup()`: the signup flow, one question at a time: email → full name → mobile (optional, `[TAB] SKIP`; validated and normalised by `normPhone` to `+614…` or international `+…`) → consent checkbox (required; wording from `consentText()`) → JOIN. `sendSignup(data)` POSTs `{ email, name, phone, consent_email, consent_sms, consent_text, list }` to `WAITLIST_URL`, and the visitor is also saved to localStorage.
 - `frame(now)`: the main animation loop, about 30fps on desktop and 20fps on phones, paused when the tab is hidden.
 
 ## Design rules (keep these)
