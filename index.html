@@ -34,6 +34,7 @@ input:autofill{-webkit-text-fill-color:transparent;caret-color:transparent;-webk
 </defs></svg>
 <sc-if value="{{ booting }}" hint-placeholder-val="{{ true }}">
   <div ref="{{ boot }}" onClick="{{ skipBoot }}" style="position:fixed;inset:0;z-index:100;background:var(--bsod,#040805);color:#7FE9F0;overflow:hidden">
+    <canvas ref="{{ waveCanvas }}" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
     <canvas ref="{{ bootCanvas }}" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
     <div style="position:absolute;top:18px;left:clamp(16px,3vw,40px);right:clamp(16px,3vw,40px);display:flex;justify-content:space-between;gap:12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase">
       <span></span>
@@ -456,6 +457,10 @@ function renderScope(ctx, g, ox, oy, cw, chh, t, color, useHeat) {
 }
 
 let FONT_READY = false;
+const SIN_LUT = new Float32Array(1024).map((_, i) => Math.sin(i / 1024 * Math.PI * 2));
+const fsin = x => SIN_LUT[((x - Math.floor(x)) * 1024) | 0];
+const ENV = new Float32Array(256).map((_, i) => Math.pow(Math.sin(Math.PI * i / 255), 0.6));
+const WT_PH = new Float32Array(9);
 // Glyph glow is cropped at 0.75x the blur radius; the tail beyond that is invisible but was most of the blending cost.
 const GLOW_PAD = 0.75;
 const GLYPHS = new Map(), ATLAS_CHARS = [...new Set(RAMP + GLITCH)].join("");
@@ -550,7 +555,7 @@ class Component extends DCLogic {
 
   constructor(p) {
     super(p);
-    ["root", "fullOk", "consentRef", "hero", "heroCanvas", "boot", "bootCanvas", "bootPct", "bootBar", "bootMsg", "bootCorners", "clock", "queue", "cdD", "cdH", "cdM", "cdS", "cursor", "cursorBox", "cursorLbl", "emailRef", "hudHex", "hudUp", "hudSig", "hudNode", "hudDb", "hudLat", "hudPkt", "hudEq", "hudCoord", "cdLine", "artWrap", "artCanvas", "artLabel", "globeWrap", "globeCanvas", "globeStatus", "globeZoom", "heroText", "hudWrap", "handSlot", "radioEq", "waveCanvas", "lensImg", "lensDisp", "lensImgX", "lensDispX", "pongCanvas", "pongWrap", "pongP", "pongC", "graphCanvas", "cX", "cY", "cZ", "gaugeL", "gaugeR"].forEach(k => (this[k] = React.createRef()));
+    ["root", "fullOk", "consentRef", "waveCanvas", "hero", "heroCanvas", "boot", "bootCanvas", "bootPct", "bootBar", "bootMsg", "bootCorners", "clock", "queue", "cdD", "cdH", "cdM", "cdS", "cursor", "cursorBox", "cursorLbl", "emailRef", "hudHex", "hudUp", "hudSig", "hudNode", "hudDb", "hudLat", "hudPkt", "hudEq", "hudCoord", "cdLine", "artWrap", "artCanvas", "artLabel", "globeWrap", "globeCanvas", "globeStatus", "globeZoom", "heroText", "hudWrap", "handSlot", "radioEq", "waveCanvas", "lensImg", "lensDisp", "lensImgX", "lensDispX", "pongCanvas", "pongWrap", "pongP", "pongC", "graphCanvas", "cX", "cY", "cZ", "gaugeL", "gaugeR"].forEach(k => (this[k] = React.createRef()));
     this.queueN = (p && p.queueBase != null ? p.queueBase : 78) - 1;
     this.mouse = { x: -9999, y: -9999 };
   }
@@ -1156,6 +1161,17 @@ class Component extends DCLogic {
     if (hx && hy) { this.corners++; if (this.bootCorners.current) this.bootCorners.current.textContent = String(this.corners).padStart(2, "0"); }
     const ctx = this.bctx;
     ctx.clearRect(0, 0, W, H);
+    const wv = this.waveCanvas.current;
+    if (wv && now - (this.wLast || 0) > 33) {
+      this.wLast = now;
+      if (wv !== this.wcv || W !== this.wW || H !== this.wH) {
+        this.wcv = wv; this.wW = W; this.wH = H;
+        const wd = Math.min(SCOPE_DPR, window.devicePixelRatio || 1);
+        wv.width = W * wd; wv.height = H * wd; this.wctx = wv.getContext("2d"); this.wctx.setTransform(wd, 0, 0, wd, 0, 0);
+      }
+      this.wctx.clearRect(0, 0, W, H);
+      this.drawWavetable(this.wctx, W, H, now / 1000);
+    }
     ctx.save(); ctx.shadowColor = this.bcol; ctx.shadowBlur = Math.max(3, cw * 1.4);
     renderGrid(ctx, g, this.bx, this.by, cw, ch, cw / 0.6, now / 1000, this.bcol, this.blue(), false);
     ctx.restore();
@@ -1173,6 +1189,44 @@ class Component extends DCLogic {
     const n = Math.round(this.bp / 174 * 20);
     if (this.bootBar.current) this.bootBar.current.textContent = "█".repeat(n) + "░".repeat(20 - n);
     if (this.bootPct.current) this.bootPct.current.textContent = String(Math.floor(this.bp)).padStart(3, "0");
+  }
+
+  // (fsin(x) = sin(2πx) from a lookup table; the wavetable evaluates ~30k sines per frame.)
+  // Loader backdrop: a dotted 3D wavetable (stacked, morphing waveforms receding into depth), shimmering and
+  // kicking on a 174 BPM beat, and powering up as the counter climbs. Plain dots, no shadowBlur, to stay cheap.
+  drawWavetable(ctx, W, H, t) {
+    const mobile = W < 640, N = mobile ? 90 : 130, M = mobile ? 18 : 26;
+    const Wf = Math.min(W * (mobile ? 0.92 : 0.72), 1150), cx = W / 2 - (mobile ? 0 : Wf * 0.08), cy = H * (mobile ? 0.42 : 0.5);
+    const depthH = Math.min(H * 0.34, Wf * 0.42), dxBack = Wf * (mobile ? 0.12 : 0.22);
+    const tt = this.reduce ? t * 0.08 : t, beat = 60 / 174, k = (tt % beat) / beat, kick = this.reduce ? 0 : Math.exp(-k * 6);
+    const power = 0.35 + 0.65 * Math.min(1, (this.bp || 0) / 174);
+    const A = Math.min(H * 0.16, Wf * 0.13) * power * (1 + 0.3 * kick), lift = -kick * Math.min(H, W) * 0.018;
+    const TAU = Math.PI * 2, r = mobile ? 1.6 : 1.8, ph = WT_PH;
+    ctx.save(); ctx.fillStyle = "#7FE9F0";
+    for (let j = M - 1; j >= 0; j--) {
+      const d = j / (M - 1), sc = 1 - 0.38 * d;
+      const m = 0.5 + 0.5 * Math.sin(d * 3.1 + tt * 0.7);
+      const c1 = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(tt * 0.9 + d * 5)), c2 = 0.65 + 0.25 * Math.sin(tt * 0.6 - d * 4);
+      const ox = cx + d * dxBack, oy = cy + (0.5 - d) * depthH + lift * (1 - d * 0.5);
+      ctx.globalAlpha = 0.3 + 0.7 * (1 - d * 0.75);
+      const rr = r * sc;
+      for (let h = 1; h <= 8; h++) ph[h] = (d * h * 1.7 + (h > 4 ? tt * h * 0.4 : 0)) / TAU;
+      ctx.beginPath();
+      for (let i = 0; i < N; i++) {
+        const u = i / (N - 1), x2 = u * 2 + tt * 0.15;
+        let saw = 0; for (let h = 1; h <= 8; h++) saw += fsin(h * x2 + ph[h]) / h;
+        let w = fsin(x2) * (1 - m) * 0.8 + saw * 0.8 * m;
+        const e1 = (u - c1) * (u - c1), e2 = (u - c2) * (u - c2);
+        if (e1 < 0.04) w += Math.exp(-e1 / 0.004) * 0.9;
+        if (e2 < 0.02) w += Math.exp(-e2 / 0.002) * 0.6 * m;
+        w += fsin((u * 90 + tt * 38 + d * 7) / TAU) * 0.05 * (0.4 + kick);
+        const env = ENV[Math.round(u * 255)];
+        const px = ox + (u - 0.5) * Wf * sc, py = oy - w * env * A * sc;
+        ctx.rect(px - rr / 2, py - rr / 2, rr, rr);
+      }
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   skipBoot = () => {
@@ -1418,7 +1472,7 @@ class Component extends DCLogic {
       "> QUEUE POSITION: #" + (pos || 0).toLocaleString("en-US")
     ];
     return {
-      root: this.root, hero: this.hero, heroCanvas: this.heroCanvas, boot: this.boot, bootCanvas: this.bootCanvas,
+      root: this.root, waveCanvas: this.waveCanvas, hero: this.hero, heroCanvas: this.heroCanvas, boot: this.boot, bootCanvas: this.bootCanvas,
       bootPct: this.bootPct, bootBar: this.bootBar, bootMsg: this.bootMsg, bootCorners: this.bootCorners,
       clock: this.clock, queue: this.queue, cdD: this.cdD, cdH: this.cdH, cdM: this.cdM, cdS: this.cdS,
       cursor: this.cursor, cursorBox: this.cursorBox, cursorLbl: this.cursorLbl, emailRef: this.emailRef, customCursor: this.props.customCursor ?? true, hudHex: this.hudHex, hudUp: this.hudUp, hudSig: this.hudSig, hudNode: this.hudNode, hudDb: this.hudDb, hudLat: this.hudLat, hudPkt: this.hudPkt, hudEq: this.hudEq, hudCoord: this.hudCoord, cdLine: this.cdLine, globeWrap: this.globeWrap, globeCanvas: this.globeCanvas, globeStatus: this.globeStatus, globeZoom: this.globeZoom, heroText: this.heroText, handSlot: this.handSlot, waveCanvas: this.waveCanvas, artWrap: this.artWrap, artCanvas: this.artCanvas, artLabel: this.artLabel, isMobileView: !!this.state.mobile, globeOrder: this.state.mobile ? "-1" : "0", evGap: this.state.mobile ? "16px" : "clamp(24px,3vw,40px)", rowPad: this.state.mobile ? "6px 0" : "14px 0", numSize: this.state.mobile ? "44px" : "63px", resAlign: this.state.mobile ? "stretch" : "flex-start",

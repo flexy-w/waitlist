@@ -45,7 +45,7 @@ There are two parts:
 | `screenBlue` | #040805 | Background colour |
 
 ## Page sections (template, in order)
-- **Boot / preloader** (top of the template): the bouncing ASCII hand and 000→174 counter. Messages: "Calibrating low-end", "Loading doubles", "Reloading gunfingers", "Preparing frog lasers", "Sub bass detected", then "Loading complete".
+- **Boot / preloader** (top of the template): the bouncing ASCII hand over a dotted 3D wavetable (its own canvas, `drawWavetable`, redrawn at 30fps; it kicks on a 174 BPM beat and grows as the counter climbs), and the 000→174 counter. Messages: "Calibrating low-end", "Loading doubles", "Reloading gunfingers", "Preparing frog lasers", "Sub bass detected", then "Loading complete".
 - **Hero** (`data-screen-label="Hero"`, ~line 55): the header row, the H1 `SURROUND` (scrambles on hover), the highlighted subhead "The filthiest Drum & Bass party Sydney has ever seen. One night only.", the terminal signup, and the ASCII hand canvas.
 - **Events / INFO** (`data-screen-label="Events"`, ~line 142): the centred highlighted `EVENT INFO` header, then the `EVENT_001.EXE` window with the #001 details, "STATUS: WAITLIST ONLINE" with a green blinker, DATE/LOCATION/LINEUP set to [REDACTED], the `> RESERVE YOUR SPOT` button, the globe, and the foldable data panels (graph and data console).
 - **About** (`data-screen-label="About"`, ~line 221): two `>` lines with a blinking block cursor.
@@ -55,7 +55,7 @@ There are two parts:
 - `drawHero(t)`: ASCII hand layout, cursor-heat glitch and float. It uses `buildGrid`, `buildFromImage` and `renderGrid` (top of the script). Glowing glyphs are drawn from one pre-rendered atlas canvas per size/colour (`glyphAtlas`).
 - `drawGlobe(t)` / `drawGlobeText`: a 19s globe loop. It spins to Australia, targets Sydney, zooms in with the analysis, zooms out, then makes one full rotation. It has phosphor trails and a faint scope grid, and country outlines load from jsdelivr world-atlas.
 - `tickGraph(now)`: the jagged 3-line data graph.
-- `initBoot` / `drawBoot` / `exitBoot`: the preloader and the CRT switch-off exit.
+- `initBoot` / `drawBoot` / `exitBoot`: the preloader and the CRT switch-off exit. `drawWavetable(ctx, W, H, t)` draws the loader's dotted waveform surface (rows batched into one path each; sines from `fsin` lookup table).
 - `startRadio` / `stopRadio` / `startSynth`: the radio toggle (Web Audio).
 - `redactGlitch()`: an occasional scramble on [REDACTED] tags, drawn as an overlay so the layout never moves.
 - `buildLens` / `syncLens`: the lens warp SVG filter.
