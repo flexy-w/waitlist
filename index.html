@@ -384,7 +384,9 @@ async function saveKlaviyo({ email, name, phone, list, consent_text }) {
   if (!r.ok && phone) { console.warn("klaviyo sms", r.status, await r.text().catch(() => "")); r = await kvFetch("subscriptions", sub(false)); }
   if (!r.ok) throw new Error("klaviyo subscribe " + r.status + " " + (await r.text().catch(() => "")));
   const parts = (name || "").trim().split(/\s+/).filter(Boolean);
-  kvFetch("profiles", { type: "profile", attributes: Object.assign({ email, properties: { waitlist: list, consent_text, signup_source: location.hostname } }, parts.length ? { first_name: parts[0], last_name: parts.slice(1).join(" ") || undefined } : {}) }).catch(() => {});
+  // Name, phone (kept even if SMS consent was rejected above) and extra fields; retried without the phone if Klaviyo rejects it.
+  const prof = withPhone => ({ type: "profile", attributes: Object.assign({ email, properties: { waitlist: list, consent_text, signup_source: location.hostname } }, parts.length ? { first_name: parts[0], last_name: parts.slice(1).join(" ") || undefined } : {}, withPhone ? { phone_number: phone } : {}) });
+  try { const p = await kvFetch("profiles", prof(!!phone)); if (!p.ok && phone) await kvFetch("profiles", prof(false)); } catch (e) {}
 }
 // Saves to Klaviyo and Supabase together; it only fails if both fail.
 async function saveEverywhere(row) {
