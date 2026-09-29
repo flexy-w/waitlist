@@ -364,7 +364,7 @@ const SUPABASE_URL = "https://uxidyuwketdpfxbpolka.supabase.co", SUPABASE_KEY = 
 const sbFetch = (path, body, extra) => fetch(SUPABASE_URL + path, { method: "POST", headers: Object.assign({ apikey: SUPABASE_KEY, "Content-Type": "application/json" }, extra), body: JSON.stringify(body) });
 // Resolves "ok" (saved) or "dup" (email already on the list); rejects on any other failure.
 async function saveSignup(row) {
-  const r = await sbFetch("/rest/v1/waitlist", row, { Prefer: "return=minimal" });
+  const r = await logReply("SUPABASE", await sbFetch("/rest/v1/waitlist", row, { Prefer: "return=minimal" }));
   if (r.ok) return "ok";
   if (r.status === 409) return "dup";
   throw new Error("waitlist insert " + r.status + " " + (await r.text().catch(() => "")));
@@ -372,7 +372,10 @@ async function saveSignup(row) {
 // Klaviyo (main contact list). Only the public Site ID lives here: the client API can add subscribers but
 // can't read anything back. Never put a private key (pk_…) in this file.
 const KLAVIYO_SITE_ID = "SjPnC7", KLAVIYO_LIST_ID = "R3XEkJ";
-const kvFetch = (path, data) => fetch("https://a.klaviyo.com/client/" + path + "?company_id=" + KLAVIYO_SITE_ID, { method: "POST", headers: { revision: "2025-07-15", "Content-Type": "application/vnd.api+json", accept: "application/vnd.api+json" }, body: JSON.stringify({ data }) });
+// Visiting the site with ?debug in the URL shows a pop-up after signing up with each service's reply.
+const SIGNUP_DEBUG = /[?&]debug\b/.test(location.search), signupLog = [];
+const logReply = async (tag, r) => { if (SIGNUP_DEBUG) signupLog.push(tag + ": " + r.status + " " + (await r.clone().text().catch(() => "")).slice(0, 300)); return r; };
+const kvFetch = (path, data) => fetch("https://a.klaviyo.com/client/" + path + "?company_id=" + KLAVIYO_SITE_ID, { method: "POST", headers: { revision: "2025-07-15", "Content-Type": "application/vnd.api+json", accept: "application/vnd.api+json" }, body: JSON.stringify({ data }) }).then(r => logReply("KLAVIYO " + path, r));
 // Subscribes to the list (email + SMS marketing consent), then fills in name and extra fields.
 // If Klaviyo rejects the phone/SMS part (e.g. SMS not set up yet), it retries with email only.
 async function saveKlaviyo({ email, name, phone, list, consent_text }) {
@@ -385,7 +388,9 @@ async function saveKlaviyo({ email, name, phone, list, consent_text }) {
 }
 // Saves to Klaviyo and Supabase together; it only fails if both fail.
 async function saveEverywhere(row) {
+  signupLog.length = 0;
   const [k, s] = await Promise.allSettled([saveKlaviyo(row), saveSignup(row)]);
+  if (SIGNUP_DEBUG) { await new Promise(res => setTimeout(res, 1500)); alert(signupLog.concat([k, s].filter(x => x.status === "rejected").map(x => "ERR " + x.reason)).join("\n\n") || "no replies"); }
   if (k.status === "rejected") console.error(k.reason);
   if (s.status === "rejected") console.error(s.reason);
   if (k.status === "rejected" && s.status === "rejected") throw new Error("signup failed everywhere");
