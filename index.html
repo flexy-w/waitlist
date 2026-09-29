@@ -369,6 +369,27 @@ async function saveSignup(row) {
   if (r.status === 409) return "dup";
   throw new Error("waitlist insert " + r.status + " " + (await r.text().catch(() => "")));
 }
+// Klaviyo (main contact list). Only the public Site ID lives here: the client API can add subscribers but
+// can't read anything back. Never put a private key (pk_…) in this file.
+const KLAVIYO_SITE_ID = "SjPnC7", KLAVIYO_LIST_ID = "R3XEkJ";
+const kvFetch = (path, data) => fetch("https://a.klaviyo.com/client/" + path + "?company_id=" + KLAVIYO_SITE_ID, { method: "POST", headers: { revision: "2025-07-15", "Content-Type": "application/vnd.api+json", accept: "application/vnd.api+json" }, body: JSON.stringify({ data }) });
+// Subscribes to the list (email + SMS marketing consent), then fills in name and extra fields.
+// If Klaviyo rejects the phone/SMS part (e.g. SMS not set up yet), it retries with email only.
+async function saveKlaviyo({ email, name, phone, list, consent_text }) {
+  const sub = withPhone => ({ type: "subscription", attributes: { custom_source: "SURROUND waitlist", profile: { data: { type: "profile", attributes: Object.assign({ email, subscriptions: Object.assign({ email: { marketing: { consent: "SUBSCRIBED" } } }, withPhone ? { sms: { marketing: { consent: "SUBSCRIBED" } } } : {}) }, withPhone ? { phone_number: phone } : {}) } } }, relationships: { list: { data: { type: "list", id: KLAVIYO_LIST_ID } } } });
+  let r = await kvFetch("subscriptions", sub(!!phone));
+  if (!r.ok && phone) { console.warn("klaviyo sms", r.status, await r.text().catch(() => "")); r = await kvFetch("subscriptions", sub(false)); }
+  if (!r.ok) throw new Error("klaviyo subscribe " + r.status + " " + (await r.text().catch(() => "")));
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  kvFetch("profiles", { type: "profile", attributes: Object.assign({ email, properties: { waitlist: list, consent_text, signup_source: location.hostname } }, parts.length ? { first_name: parts[0], last_name: parts.slice(1).join(" ") || undefined } : {}) }).catch(() => {});
+}
+// Saves to Klaviyo and Supabase together; it only fails if both fail.
+async function saveEverywhere(row) {
+  const [k, s] = await Promise.allSettled([saveKlaviyo(row), saveSignup(row)]);
+  if (k.status === "rejected") console.error(k.reason);
+  if (s.status === "rejected") console.error(s.reason);
+  if (k.status === "rejected" && s.status === "rejected") throw new Error("signup failed everywhere");
+}
 async function signupCount() {
   try { const r = await sbFetch("/rest/v1/rpc/waitlist_count", {}); if (!r.ok) return null; const n = +(await r.json()); return Number.isFinite(n) ? n : null; } catch (e) { return null; }
 }
@@ -1620,7 +1641,7 @@ class Component extends DCLogic {
     const email = (this.state.email || "").trim().toLowerCase(), name = (this.state.name || "").trim(), phone = this.state.phone || "";
     this.setState({ sending: true, error: "" });
     try {
-      await saveSignup({ email, name: name || null, phone: phone || null, consent_email: true, consent_sms: !!phone, consent_text: this.consentText(), list: "main" });
+      await saveEverywhere({ email, name: name || null, phone: phone || null, consent_email: true, consent_sms: !!phone, consent_text: this.consentText(), list: "main" });
     } catch (err) {
       console.error(err);
       this.setState({ sending: false, error: "ERROR 0x50: SIGNAL LOST. YOU'RE NOT ON THE LIST YET. TRY AGAIN." });
@@ -1646,7 +1667,7 @@ class Component extends DCLogic {
     if (this.state.sending) return;
     email = email.toLowerCase();
     this.setState({ sending: true, error: "" });
-    try { await saveSignup({ email, consent_email: true, consent_sms: false, consent_text: "WAITLIST FULL: WE'LL EMAIL YOU AS SOON AS MORE SLOTS OPEN", list: "overflow" }); }
+    try { await saveEverywhere({ email, consent_email: true, consent_sms: false, consent_text: "WAITLIST FULL: WE'LL EMAIL YOU AS SOON AS MORE SLOTS OPEN", list: "overflow" }); }
     catch (err) { console.error(err); this.setState({ sending: false, error: "ERROR 0x50: SIGNAL LOST. YOU'RE NOT ON THE LIST YET. TRY AGAIN." }); return; }
     try { localStorage.setItem(STORE, JSON.stringify({ email, overflow: true })); localStorage.removeItem(STORE + "_partial"); } catch (err) {}
     this.setState({ sending: false });
