@@ -42,7 +42,7 @@ There are two parts:
 | `radioStreamUrl` | "" | Real stream URL for the radio toggle. Empty means the built-in 174 BPM synth. |
 | `graphStyle` | "wavetable" | Graph Data panel: `wavetable` (dotted 3D wavetable / radio spectrum waterfall) or `lines` (original 3-line graph) |
 | `queueBase` | 78 | Starting number for the momentum counter (and for the real-count queue if `hypeCounter` is off). |
-| `hypeCounter` | true | Momentum line under the form: "WAITLIST CAPACITY [bar] N%" (ALMOST FULL in amber from 90%); the registered count itself is not shown, only used for the bar and the queue position. **Simulated, not real sign-ups.** Queue position after joining = this counter. Off = real Supabase count. |
+| `hypeCounter` | false | (Off for now.) Momentum line under the form: "WAITLIST CAPACITY [bar] N%" (ALMOST FULL in amber from 90%); the registered count itself is not shown, only used for the bar and the queue position. **Simulated, not real sign-ups.** Queue position after joining = this counter. Off = real Supabase count. |
 | `waitlistFull` | false | FOMO mode: sign-ups get a "WAITLIST FULL" pop-up and go on the overflow list (sent with `list: "overflow"`); status shows WAITLIST FULL |
 | `screenBlue` | #040805 | Background colour |
 
